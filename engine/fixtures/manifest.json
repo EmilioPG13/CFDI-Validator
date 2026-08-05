@@ -1,0 +1,14 @@
+[
+  {
+    "ruleId": "regimen-uso-compat",
+    "pass": "fixtures/regimen-uso-compat/pass.xml",
+    "fail": "fixtures/regimen-uso-compat/fail.xml",
+    "expectFinding": true
+  },
+  {
+    "ruleId": "domicilio-fiscal-receptor-cp-existe",
+    "pass": "fixtures/domicilio-fiscal-receptor-cp-existe/pass.xml",
+    "fail": "fixtures/domicilio-fiscal-receptor-cp-existe/fail.xml",
+    "expectFinding": true
+  }
+]

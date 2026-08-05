@@ -1,0 +1,21 @@
+{
+  "name": "@cfdi-risk-auditor/engine",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "description": "Deterministic core: parse, XSD-validate and rule-check CFDI 4.0 XML. Pure functions, no I/O beyond local files/catalog lookups — must stay portable to WASM-in-browser (Phase 4).",
+  "scripts": {
+    "postinstall": "node scripts/ensure-catalogs-db.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test --experimental-strip-types test/**/*.test.ts"
+  },
+  "dependencies": {
+    "libxml2-wasm": "^0.7.1",
+    "@nodecfdi/cfdi-to-json": "^2.0.1"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "@types/node": "^24.0.0",
+    "unbzip2-stream": "^1.4.3"
+  }
+}

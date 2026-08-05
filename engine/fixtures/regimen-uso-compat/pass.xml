@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<cfdi:Comprobante xmlns:cfdi="http://www.sat.gob.mx/cfd/4" xmlns:tfd="http://www.sat.gob.mx/TimbreFiscalDigital" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.sat.gob.mx/cfd/4 http://www.sat.gob.mx/sitio_internet/cfd/4/cfdv40.xsd http://www.sat.gob.mx/TimbreFiscalDigital http://www.sat.gob.mx/sitio_internet/cfd/TimbreFiscalDigital/TimbreFiscalDigitalv11.xsd" Version="4.0" Fecha="2026-08-04T12:00:00" Sello="KXxmAr9FpPyJd/xkLVnMSQ1y0jCxc3b90DlVTH7lUG4OmGyrJGh77sxQi/OgqANoS1HZ54o4mM3a+M6r3xp5CuWhD48yMPdPWhbihQu1ASMzgJkiAp9loasZPW0SRq5yJMtW+MX/qMcWOW/cXndXzSqRQjx8R4j2kYghQu8Gv3HspBIN3JQiBxanvOeDjwS1Udw1afTENKM6fe/FBm1q9EOVlqyeIHLy75oV96D9y4QroXao" NoCertificado="30001000000500003456" Certificado="uY1l1uGpB4Uuh9pehEcOje7/NbDaTIkcHUvsf9LrInZuAP1NKzKXk4dyC4giHr6bgeqI2VEZFMuxQg2GvG9Fn6zFG33qHvwg5QWhgLMigIx+vNsUJLMIQFApMr75ljJB69fZPUN4utlASqlp1z9vvHtKa+83GwR9waneHHEbTWmUl+3+8hT9SDa6kDOg79FaPhFnSP437x6TLO96A9KX0782ezGehjLe/UU/KJzDzSLGwcOQHPgEGi+RWHcbw4kKpPzYQ4y3o4WlZkGcvYlxWTRd+aJMOxYTcfCJLeaMAne1LbWrtvURaUl/7u82tKVsSeQAOsSp7Y+IYytIN9wQisAs4sEXwyu8SDy28gMOU9OZBEsC1w7awhNSM1L4ftGEfwORByVSabaK6DLB2MirMeZgbfRuy0dVhfQ4ql0Id5ce80dFN3fdHDMgySO4Qz/keDEGOVTaUYYs3UVe+KXm7QLVf+So+DRjW5TNgU3tlv1Fg3lzWPxUEz5E6BOTZEaDqWoy+fNbkIGn69FghSKfESpiu1l52eNadlwbD2nmbn8CkRJT7ZpOxvCj1exYlgLS4lkSfahT/a8si/LP1knmwjLQXuIvJCHkHk9MHasaCdnfzgaKFsW8V7lja5yTvkauYE+KmQLvX9kTwpvzvJsfmyKnxVbuhheQbQA+BS2XdAxAF/mz5i9vifscX7LbqlU7Qr61u5F9xyoqyztCrG0TpuNX4W7m/MiwfuUxSY1r8f7W0eVAwbJ4Wk3q08NLphpiUJjcgE1I4Ntu8bw7BSHnk5GZNDTkjYh6OgtD3S1baupnqFBx7ttR2cMY1EbC9QaowRHXNZ6Nmq06FGTlfmiocwhMWBtsJcGp9UcGWEwlml+tRxZYpui6bA+R6gwGPNhh5hzSOJm6SSK5PuOq1J3RUma2rE55tvPDJV7duw==" SubTotal="5000.00" Moneda="MXN" Total="5800.00" TipoDeComprobante="I" Exportacion="01" FormaPago="01" MetodoPago="PUE" LugarExpedicion="06600">
+	<cfdi:Emisor Rfc="ABC010101AB1" Nombre="EMPRESA DEMO SINTETICA SA DE CV" RegimenFiscal="601"/>
+	<cfdi:Receptor Rfc="XYZ010101AB2" Nombre="CLIENTE DE PRUEBA SA DE CV" DomicilioFiscalReceptor="06600" RegimenFiscalReceptor="601" UsoCFDI="G03"/>
+	<cfdi:Conceptos>
+		<cfdi:Concepto ClaveProdServ="81111500" Cantidad="1.000000" ClaveUnidad="E48" Descripcion="Servicios de desarrollo de software a la medida (dato sintetico de prueba)" ValorUnitario="5000.00" Importe="5000.00" ObjetoImp="02">
+			<cfdi:Impuestos>
+				<cfdi:Traslados>
+					<cfdi:Traslado Base="5000.00" Impuesto="002" TipoFactor="Tasa" TasaOCuota="0.160000" Importe="800.00"/>
+				</cfdi:Traslados>
+			</cfdi:Impuestos>
+		</cfdi:Concepto>
+	</cfdi:Conceptos>
+	<cfdi:Impuestos TotalImpuestosTrasladados="800.00">
+		<cfdi:Traslados>
+			<cfdi:Traslado Base="5000.00" Impuesto="002" TipoFactor="Tasa" TasaOCuota="0.160000" Importe="800.00"/>
+		</cfdi:Traslados>
+	</cfdi:Impuestos>
+	<cfdi:Complemento>
+		<tfd:TimbreFiscalDigital Version="1.1" UUID="51c90142-fa74-4964-b2dc-04752dd93774" FechaTimbrado="2026-08-04T12:00:05" RfcProvCertif="TFD010101AB1" SelloCFD="dDHtqbLVNNU9dS0x9wUn3QhrskaaksT0jxaXjjNyz7GJ6rDHv0NwN53B9FL281wGFxaGja50+TqAKTm8oM5eXqI5dMseJjIuebDBP7+B0bN6Ykv3D/1Q8Dupv3My0d6q4pd85BPk3gAcPq5l9gpe9QWj2LW1SjpM7fP+gyKtms1tdLNfNU5PRN4NzIQ3vDDfUo3cBKstszNDuuBb36LieGJewNw0cnC+ASh4mNcJW7c8UMAD" NoCertificadoSAT="00001000000500009999" SelloSAT="JYjSyakrzYtYSi40J658uBFLuxaWqqc+qL3yJPmMODkOfrJkfrahbB96OvsaNGnmA2ysf0ICNg9OsEVNppH0KWQHOFqc77ByoX4xepimiCEZzstxOp4wINGaEdCrbEJaZNiBpg/a5aKOIlS2Kms+9yqwai4XWJJFtzIzzB3TDQTAYFM+i6A0nCiUy9AWel1YnXXL26FjHNR3hsd1B9seJnGWcUT55AsMWRb9dEh0XHpx2R8e"/>
+	</cfdi:Complemento>
+</cfdi:Comprobante>

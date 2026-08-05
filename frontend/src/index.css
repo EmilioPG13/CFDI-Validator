@@ -1,0 +1,179 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 240 10% 3.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 3.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 10% 3.9%;
+    --primary: 240 5.9% 10%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 240 4.8% 95.9%;
+    --secondary-foreground: 240 5.9% 10%;
+    --muted: 240 4.8% 95.9%;
+    --muted-foreground: 240 3.8% 46.1%;
+    --accent: 240 4.8% 95.9%;
+    --accent-foreground: 240 5.9% 10%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 5.9% 90%;
+    --input: 240 5.9% 90%;
+    --ring: 240 5.9% 10%;
+    --radius: 0.625rem;
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .dark {
+    --background: 240 10% 3.9%;
+    --foreground: 0 0% 98%;
+    --card: 240 10% 3.9%;
+    --card-foreground: 0 0% 98%;
+    --popover: 240 10% 3.9%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 0 0% 98%;
+    --primary-foreground: 240 5.9% 10%;
+    --secondary: 240 3.7% 15.9%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 240 3.7% 15.9%;
+    --muted-foreground: 240 5% 64.9%;
+    --accent: 240 3.7% 15.9%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 3.7% 15.9%;
+    --input: 240 3.7% 15.9%;
+    --ring: 240 4.9% 83.9%;
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+/* ------------------------------------------------------------------
+   CFDI Risk Auditor — sistema visual
+   Papel + tinta: fondo hueso, tinta azul-noche, acento azul institucional,
+   verde oscuro para estados correctos y rojo ladrillo para hallazgos.
+------------------------------------------------------------------- */
+
+:root {
+  --paper: #f6f5f0;
+  --paper-raised: #fdfdfb;
+  --ink: #101d2d;
+  --ink-soft: #43566b;
+  --ink-faint: #7d8b99;
+  --azul: #144a7c;
+  --azul-deep: #0d3356;
+  --verde: #1d5c3f;
+  --rojo: #a5301f;
+  --ambar: #8a5b12;
+  --hairline: rgba(16, 29, 45, 0.16);
+  --hairline-strong: rgba(16, 29, 45, 0.32);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--paper);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: var(--azul);
+  color: #ffffff;
+}
+
+.font-display {
+  font-family: 'Archivo', system-ui, -apple-system, sans-serif;
+}
+
+.font-serif-doc {
+  font-family: 'Source Serif 4', Georgia, 'Times New Roman', serif;
+}
+
+.font-mono-data {
+  font-family: 'IBM Plex Mono', ui-monospace, 'SF Mono', monospace;
+}
+
+/* Caja con esquinas técnicas (corner brackets), estilo plano de dibujo técnico */
+.corner-box {
+  position: relative;
+}
+.corner-box::before,
+.corner-box::after,
+.corner-box > .cb-extra::before,
+.corner-box > .cb-extra::after {
+  content: '';
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border: 1.5px solid var(--hairline-strong);
+}
+.corner-box::before {
+  top: -1px;
+  left: -1px;
+  border-right: none;
+  border-bottom: none;
+}
+.corner-box::after {
+  top: -1px;
+  right: -1px;
+  border-left: none;
+  border-bottom: none;
+}
+.corner-box > .cb-extra::before {
+  bottom: -1px;
+  left: -1px;
+  border-right: none;
+  border-top: none;
+}
+.corner-box > .cb-extra::after {
+  bottom: -1px;
+  right: -1px;
+  border-left: none;
+  border-top: none;
+}
+
+/* Versión clara de las esquinas para fondos oscuros */
+.corner-box-light::before,
+.corner-box-light::after,
+.corner-box-light > .cb-extra::before,
+.corner-box-light > .cb-extra::after {
+  border-color: rgba(255, 255, 255, 0.45);
+}
+
+/* Sello / marca tipo oficio */
+.stamp {
+  display: inline-block;
+  border: 1.5px solid currentColor;
+  padding: 0.2rem 0.55rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  transform: rotate(-1.5deg);
+}

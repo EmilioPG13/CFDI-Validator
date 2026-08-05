@@ -1,0 +1,26 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+*.tsbuildinfo
+
+# The decompressed catalog DB regenerates from the tracked .bz2 in one command
+# (see corpus/README.md) — 97 MB is too close to GitHub's 100 MB hard file-size
+# limit to track directly, and a compressed, regenerable binary has no business
+# living in git history uncompressed anyway.
+corpus/catalogs/catalogs.db
+
+# Env / secrets
+.env
+.env.local
+*.local
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/*
+!.vscode/extensions.json

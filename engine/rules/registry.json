@@ -1,0 +1,26 @@
+{
+  "$schema": "Rule specs produced by cfdi-domain's output contract (.claude/agents/cfdi-domain.md). Consumed by fixture-gen and rule-engine. Each entry: ruleId, description, fieldPath, severity, satReference, condition, source, notes.",
+  "producedBy": "Written directly this session because the cfdi-domain subagent (.claude/agents/cfdi-domain.md) was created mid-session and is not yet registered in the harness's agent-type list — new project-local agents require a session restart to become available. This entry follows the same output contract and verification bar the agent is meant to enforce. Update this note once a batch is actually produced via the real subagent.",
+  "rules": [
+    {
+      "ruleId": "regimen-uso-compat",
+      "description": "El RegimenFiscalReceptor declarado no está en la lista de regímenes fiscales válidos para el UsoCFDI que el receptor le está dando al comprobante.",
+      "fieldPath": "Comprobante/Receptor/@RegimenFiscalReceptor, validado contra Comprobante/Receptor/@UsoCFDI",
+      "severity": "error",
+      "satReference": "phpcfdi/resources-sat-catalogs release v10.13.20260731, tabla cfdi_40_usos_cfdi, columna regimenes_fiscales_receptores (corpus/catalogs/catalogs.db). Esta columna es la representación en catálogo de la matriz de compatibilidad Régimen×Uso del Anexo 20 — el SAT publica los c_RegimenFiscal aceptados por cada c_UsoCFDI directamente en el catálogo, no solo en prosa.",
+      "condition": "1) Leer Comprobante/@Fecha. 2) Buscar en cfdi_40_usos_cfdi la fila con id = Receptor/@UsoCFDI, vigente en esa fecha (vigencia_desde <= Fecha, y vigencia_hasta vacío o >= Fecha). 3) Parsear su columna regimenes_fiscales_receptores (string separado por comas) a un set de códigos. 4) Si Receptor/@RegimenFiscalReceptor no está en ese set → Finding con severity error.",
+      "source": "catalogs.db, tabla cfdi_40_usos_cfdi (24 filas, consultada directamente) + corpus/xsd/cfd/4/cfdv40.xsd líneas 166-174 (definición de los atributos RegimenFiscalReceptor y UsoCFDI en Receptor, ambos required, tipos catCFDI:c_RegimenFiscal y catCFDI:c_UsoCFDI)",
+      "notes": "Las columnas aplica_fisica/aplica_moral existen de forma independiente tanto en cfdi_40_regimenes_fiscales como en cfdi_40_usos_cfdi, pero regimenes_fiscales_receptores ya es la lista blanca combinada y curada por el SAT específicamente para esta validación — verificar fisica/moral por separado sería redundante con lo que esa columna ya garantiza, no es una omisión."
+    },
+    {
+      "ruleId": "domicilio-fiscal-receptor-cp-existe",
+      "description": "El código postal declarado en DomicilioFiscalReceptor no corresponde a ningún código postal mexicano reconocido y vigente en el catálogo del SAT.",
+      "fieldPath": "Comprobante/Receptor/@DomicilioFiscalReceptor",
+      "severity": "warning",
+      "satReference": "corpus/catalogs/catalogs.db, tabla cfdi_40_codigos_postales (95,748 filas) — catálogo oficial de códigos postales del SAT.",
+      "condition": "1) Leer Comprobante/@Fecha. 2) Buscar Receptor/@DomicilioFiscalReceptor como id en cfdi_40_codigos_postales, vigente en esa fecha. 3) Si no existe ninguna fila → Finding con severity warning.",
+      "source": "catalogs.db, tabla cfdi_40_codigos_postales + corpus/xsd/cfd/4/cfdv40.xsd líneas 137-145 (DomicilioFiscalReceptor: patrón de 5 dígitos, sin restricción de pertenencia a catálogo exigida por el propio XSD)",
+      "notes": "LIMITACIÓN DE ALCANCE, léase antes de tratar esta regla como equivalente a los códigos oficiales CFDI40147/CFDI40148: esos dos errores del SAT verifican que DomicilioFiscalReceptor coincida con el código postal REALMENTE REGISTRADO para ese RFC específico en la Constancia de Situación Fiscal del contribuyente (confirmado vía fuentes públicas: facturacioncfdimexico.blogspot.com, rubiko.mx, blog.facturandoenlinea.mx, el PDF de errores de wansoft.net). Ese vínculo CP↔RFC específico NO es un dato público estático — no está en catalogs.db, no se deriva del XSD, y no hay un endpoint público del SAT sin credenciales confirmado para consultarlo (a diferencia de ConsultaCFDIService para estatus de UUID). Esta regla, tal como está implementable en v1, solo verifica que el código postal EXISTA como CP mexicano real y vigente (atrapa typos, CPs inventados o dados de baja) — NO que sea el CP correcto para este receptor en particular. Por eso la severidad es 'warning' y no 'error': que esta regla pase no significa que el CFDI vaya a librar el CFDI40147/CFDI40148 real del SAT. Cerrar esa brecha de verdad requeriría o una consulta de PAC de paga, o la CSF del receptor — ambas fuera del alcance de v1 (sin credenciales, sin cuenta SAT en vivo)."
+    }
+  ]
+}

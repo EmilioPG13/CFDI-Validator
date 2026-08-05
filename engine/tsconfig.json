@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    // Actual execution (tests, and Phase 1's CLI) runs straight off .ts via
+    // `node --experimental-strip-types` — no build step, no dist/. That's *why*
+    // relative imports use explicit .ts extensions (Node's own ESM resolution
+    // needs the real extension; a bundler-based setup would rewrite these, but
+    // there's no bundler in this package). tsc here is a type-checker only.
+    "allowImportingTsExtensions": true,
+    "noEmit": true
+  },
+  "include": ["src/**/*", "test/**/*"]
+}
