@@ -7,13 +7,26 @@ import { regimenUsoCompat } from "./regimenUsoCompat.ts";
 import { domicilioFiscalReceptorCpExiste } from "./domicilioFiscalReceptorCpExiste.ts";
 import { cfdiCanceladoSat } from "./cfdiCanceladoSat.ts";
 import { emisorEfos69b } from "./emisorEfos69b.ts";
+import { subtotalDescuentoConceptosSuma } from "./subtotalDescuentoConceptosSuma.ts";
+import { totalComprobanteConsistencia } from "./totalComprobanteConsistencia.ts";
+import { impuestosTotalesConsistencia } from "./impuestosTotalesConsistencia.ts";
+import { monedaTipoCambioConsistencia } from "./monedaTipoCambioConsistencia.ts";
+import { claveprodservClaveunidadVigente } from "./claveprodservClaveunidadVigente.ts";
 
 /** The shape every rule in engine/rules/registry.json implements — see engine/src/finding.ts. */
 export type Rule = (parsed: ParsedCfdi, catalogs: SatCatalogs) => Finding[];
 
 /** All implemented rules, run in no particular order — each is independent per CLAUDE.md's
  *  "one rule, one function". Add new rules here as they're implemented. */
-export const rules: Rule[] = [regimenUsoCompat, domicilioFiscalReceptorCpExiste];
+export const rules: Rule[] = [
+  regimenUsoCompat,
+  domicilioFiscalReceptorCpExiste,
+  subtotalDescuentoConceptosSuma,
+  totalComprobanteConsistencia,
+  impuestosTotalesConsistencia,
+  monedaTipoCambioConsistencia,
+  claveprodservClaveunidadVigente,
+];
 
 /**
  * `cfdi-cancelado-sat` and `emisor-efos-69b` don't fit `Rule`'s signature — they read
@@ -33,4 +46,9 @@ export {
   domicilioFiscalReceptorCpExiste,
   cfdiCanceladoSat,
   emisorEfos69b,
+  subtotalDescuentoConceptosSuma,
+  totalComprobanteConsistencia,
+  impuestosTotalesConsistencia,
+  monedaTipoCambioConsistencia,
+  claveprodservClaveunidadVigente,
 };

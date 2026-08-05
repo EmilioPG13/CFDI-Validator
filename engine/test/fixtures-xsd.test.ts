@@ -10,7 +10,9 @@ const BASE_SCHEMA = path.join(CORPUS_XSD, "cfd/4/cfdv40.xsd");
 const TFD_SCHEMA = path.join(CORPUS_XSD, "cfd/TimbreFiscalDigital/TimbreFiscalDigitalv11.xsd");
 
 const FIXTURES_ROOT = path.resolve(import.meta.dirname, "../fixtures");
-const manifest: { ruleId: string; pass: string; fail: string; expectFinding: boolean }[] =
+// `fail` is optional — see rules.test.ts's manifest type comment for why (a rule can be
+// marked failNotConstructible when no real-data fail case exists).
+const manifest: { ruleId: string; pass: string; fail?: string; expectFinding: boolean }[] =
   JSON.parse(readFileSync(path.join(FIXTURES_ROOT, "manifest.json"), "utf-8"));
 
 // Every real CFDI carries a TimbreFiscalDigital complement, so this is the validator
@@ -27,7 +29,9 @@ test("every fixture in the manifest is structurally valid CFDI 4.0 + TFD XML", (
   try {
     for (const entry of manifest) {
       for (const kind of ["pass", "fail"] as const) {
-        const absPath = path.resolve(import.meta.dirname, "..", entry[kind]);
+        const rel = entry[kind];
+        if (!rel) continue; // deliberately absent fail fixture — see manifest.json
+        const absPath = path.resolve(import.meta.dirname, "..", rel);
         const xml = readFileSync(absPath);
         const result = validateXml(validator, xml);
         assert.equal(

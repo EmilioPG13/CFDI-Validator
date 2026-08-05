@@ -24,6 +24,16 @@ function minimalParsedCfdi(overrides: Partial<ParsedCfdi> = {}): ParsedCfdi {
       UsoCFDI: "G03",
     },
     Complemento: { TimbreFiscalDigital: { UUID: "00000000-0000-0000-0000-000000000000" } },
+    SubTotal: "5000.00",
+    Total: "5800.00",
+    Moneda: "MXN",
+    TipoDeComprobante: "I",
+    Conceptos: {
+      Concepto: [
+        { ClaveProdServ: "81111500", ClaveUnidad: "E48", Importe: "5000.00" },
+      ],
+    },
+    Impuestos: { TotalImpuestosTrasladados: "800.00", Traslados: { Traslado: [{ Importe: "800.00" }] } },
     ...overrides,
   };
 }

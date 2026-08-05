@@ -10,5 +10,37 @@
     "pass": "fixtures/domicilio-fiscal-receptor-cp-existe/pass.xml",
     "fail": "fixtures/domicilio-fiscal-receptor-cp-existe/fail.xml",
     "expectFinding": true
+  },
+  {
+    "ruleId": "subtotal-descuento-conceptos-suma",
+    "pass": "fixtures/subtotal-descuento-conceptos-suma/pass.xml",
+    "fail": "fixtures/subtotal-descuento-conceptos-suma/fail.xml",
+    "expectFinding": true
+  },
+  {
+    "ruleId": "total-comprobante-consistencia",
+    "pass": "fixtures/total-comprobante-consistencia/pass.xml",
+    "fail": "fixtures/total-comprobante-consistencia/fail.xml",
+    "expectFinding": true
+  },
+  {
+    "ruleId": "impuestos-totales-consistencia",
+    "pass": "fixtures/impuestos-totales-consistencia/pass.xml",
+    "fail": "fixtures/impuestos-totales-consistencia/fail.xml",
+    "expectFinding": true
+  },
+  {
+    "ruleId": "moneda-tipocambio-consistencia",
+    "pass": "fixtures/moneda-tipocambio-consistencia/pass.xml",
+    "fail": "fixtures/moneda-tipocambio-consistencia/fail.xml",
+    "expectFinding": true,
+    "notes": "fail.xml covers only the MXN branch (TipoCambio present and != 1, CFDI40114) -- the strongest-cited of the rule's 3 branches per registry.json's own notes (2 independent sources vs. 1 for the XXX branch). The foreign-currency-without-TipoCambio branch (CFDI40115) and the XXX branch are not covered by a fixture in this batch."
+  },
+  {
+    "ruleId": "claveprodserv-claveunidad-vigente",
+    "pass": "fixtures/claveprodserv-claveunidad-vigente/pass.xml",
+    "expectFinding": false,
+    "failNotConstructible": true,
+    "failNotConstructibleReason": "As of this catalogs.db snapshot, 0 rows in cfdi_40_productos_servicios and 0 rows in cfdi_40_claves_unidades have vigencia_hasta populated (confirmed by direct query 2026-08-05) -- there is no real ClaveProdServ/ClaveUnidad whose vigency has actually lapsed to build a naturally-occurring fail case from, and registry.json's own notes for this rule explicitly warn against fabricating a fake catalog row to force one. Existence-only invalidity (a ClaveProdServ/ClaveUnidad that never existed) is already caught by XSD validation (Phase 1, both catalogs are xs:enumeration-typed) before this rule would ever run, so that path can't produce a fail fixture for this rule either without duplicating the XSD test. Revisit if a future catalogs.db refresh adds a real expired row."
   }
 ]
