@@ -17,6 +17,14 @@ export interface ParsedCfdiEmisor {
   RegimenFiscal: string;
 }
 
+export interface ParsedCfdiTimbreFiscalDigital {
+  UUID: string;
+}
+
+export interface ParsedCfdiComplemento {
+  TimbreFiscalDigital?: ParsedCfdiTimbreFiscalDigital;
+}
+
 /**
  * Deliberately partial: only the fields rules have needed so far are typed.
  * Extend as new rules need new fields — don't widen this speculatively ahead
@@ -27,6 +35,9 @@ export interface ParsedCfdi {
   Fecha: string;
   Emisor: ParsedCfdiEmisor;
   Receptor: ParsedCfdiReceptor;
+  /** Optional: a CFDI without any complement is XSD-valid, though every real
+   *  SAT-stamped one carries at least TimbreFiscalDigital — see CLAUDE.md. */
+  Complemento?: ParsedCfdiComplemento;
   [key: string]: unknown;
 }
 
