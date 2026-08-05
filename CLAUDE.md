@@ -21,6 +21,12 @@ the pipeline is fixed code, agents claim rows from a `status`-column queue, same
 
 ## Gotchas
 
+- `node --experimental-strip-types` (how every package here runs its tests directly off
+  `.ts`, no build step) only **strips type annotations** — it does not transform syntax that
+  generates real code. TS constructor parameter properties
+  (`constructor(private readonly x: number) {}`), `enum`, and `namespace` all fail with
+  `ERR_UNSUPPORTED_TYPESCRIPT_SYNTAX`. Use a plain constructor parameter + explicit
+  `this.x = x` instead of parameter properties; avoid `enum`/`namespace` entirely.
 - `node` here is a **native Windows binary** — it does not resolve git-bash's `/c/...` POSIX
   paths. Use `C:/Users/...` or `C:\Users\...` in anything Node opens (confirmed with
   `node:sqlite`'s `DatabaseSync`, which failed silently-ish with "unable to open database

@@ -1,0 +1,16 @@
+{
+  "name": "@cfdi-risk-auditor/sat-client",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "description": "Network client for the SAT's public, credential-free endpoints: ConsultaCFDIService (cancellation + EFOS status by UUID) and the 69-B/EFOS list. Deliberately NOT in engine/ — that package is pure functions with no network I/O, portable to WASM; this one is not.",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "node --test --experimental-strip-types test/**/*.test.ts"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "@types/node": "^24.0.0"
+  }
+}
