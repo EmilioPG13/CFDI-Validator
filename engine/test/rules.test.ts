@@ -14,6 +14,7 @@ import {
   claveprodservClaveunidadVigente,
   tipodecomprobanteCamposProhibidos,
   impuestosConceptoRollupConsistencia,
+  impuestosTrasladosRetencionesUnicidad,
   type Rule,
 } from "../src/rules/index.ts";
 
@@ -56,6 +57,7 @@ const rulesByRuleId: Record<string, Rule> = {
   "claveprodserv-claveunidad-vigente": claveprodservClaveunidadVigente,
   "tipodecomprobante-campos-prohibidos": tipodecomprobanteCamposProhibidos,
   "impuestos-concepto-rollup-consistencia": impuestosConceptoRollupConsistencia,
+  "impuestos-traslados-retenciones-unicidad": impuestosTrasladosRetencionesUnicidad,
 };
 
 function loadFixture(relPath: string) {
