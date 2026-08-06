@@ -12,6 +12,8 @@ import {
   impuestosTotalesConsistencia,
   monedaTipoCambioConsistencia,
   claveprodservClaveunidadVigente,
+  tipodecomprobanteCamposProhibidos,
+  impuestosConceptoRollupConsistencia,
   type Rule,
 } from "../src/rules/index.ts";
 
@@ -30,6 +32,12 @@ const manifest: {
   fail?: string;
   expectFinding: boolean;
   failNotConstructible?: boolean;
+  // Defaults to 1 (the CLAUDE.md contract: "exactly one Finding for this ruleId").
+  // A rule whose spec explicitly allows several independent sub-cases to fire on the
+  // same document (registry.json condition: "no colapsarlos") can have a fail.xml that
+  // deliberately exercises more than one at once -- see tipodecomprobante-campos-
+  // prohibidos's manifest entry and notes for why this is 2, not a bug.
+  expectedFailFindingCount?: number;
 }[] = JSON.parse(readFileSync(path.join(FIXTURES_ROOT, "manifest.json"), "utf-8"));
 
 const registry: { ruleId: string; fieldPath: string; severity: string; satReference: string }[] =
@@ -46,6 +54,8 @@ const rulesByRuleId: Record<string, Rule> = {
   "impuestos-totales-consistencia": impuestosTotalesConsistencia,
   "moneda-tipocambio-consistencia": monedaTipoCambioConsistencia,
   "claveprodserv-claveunidad-vigente": claveprodservClaveunidadVigente,
+  "tipodecomprobante-campos-prohibidos": tipodecomprobanteCamposProhibidos,
+  "impuestos-concepto-rollup-consistencia": impuestosConceptoRollupConsistencia,
 };
 
 function loadFixture(relPath: string) {
@@ -91,17 +101,21 @@ for (const entry of manifest) {
       try {
         const parsed = loadFixture(failPath);
         const findings = rule(parsed, catalogs).filter((f) => f.ruleId === entry.ruleId);
+        const expectedCount = entry.expectedFailFindingCount ?? 1;
         assert.equal(
           findings.length,
-          1,
-          `expected exactly one finding, got ${JSON.stringify(findings)}`,
+          expectedCount,
+          `expected exactly ${expectedCount} finding(s), got ${JSON.stringify(findings)}`,
         );
-        const [finding] = findings;
-        assert.equal(finding.ruleId, entry.ruleId);
-        assert.equal(finding.fieldPath, spec!.fieldPath);
-        assert.equal(finding.severity, spec!.severity);
-        assert.equal(finding.satReference, spec!.satReference);
-        assert.ok(finding.evidence !== undefined && finding.evidence !== null);
+        // Every finding sharing a ruleId shares the same fieldPath/severity/satReference
+        // per the spec -- sub-cases differ only in evidence, not in citation.
+        for (const finding of findings) {
+          assert.equal(finding.ruleId, entry.ruleId);
+          assert.equal(finding.fieldPath, spec!.fieldPath);
+          assert.equal(finding.severity, spec!.severity);
+          assert.equal(finding.satReference, spec!.satReference);
+          assert.ok(finding.evidence !== undefined && finding.evidence !== null);
+        }
       } finally {
         catalogs.close();
       }

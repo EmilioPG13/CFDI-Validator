@@ -12,6 +12,8 @@ import { totalComprobanteConsistencia } from "./totalComprobanteConsistencia.ts"
 import { impuestosTotalesConsistencia } from "./impuestosTotalesConsistencia.ts";
 import { monedaTipoCambioConsistencia } from "./monedaTipoCambioConsistencia.ts";
 import { claveprodservClaveunidadVigente } from "./claveprodservClaveunidadVigente.ts";
+import { tipodecomprobanteCamposProhibidos } from "./tipodecomprobanteCamposProhibidos.ts";
+import { impuestosConceptoRollupConsistencia } from "./impuestosConceptoRollupConsistencia.ts";
 
 /** The shape every rule in engine/rules/registry.json implements — see engine/src/finding.ts. */
 export type Rule = (parsed: ParsedCfdi, catalogs: SatCatalogs) => Finding[];
@@ -26,6 +28,8 @@ export const rules: Rule[] = [
   impuestosTotalesConsistencia,
   monedaTipoCambioConsistencia,
   claveprodservClaveunidadVigente,
+  tipodecomprobanteCamposProhibidos,
+  impuestosConceptoRollupConsistencia,
 ];
 
 /**
@@ -51,4 +55,6 @@ export {
   impuestosTotalesConsistencia,
   monedaTipoCambioConsistencia,
   claveprodservClaveunidadVigente,
+  tipodecomprobanteCamposProhibidos,
+  impuestosConceptoRollupConsistencia,
 };

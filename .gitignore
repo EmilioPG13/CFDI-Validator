@@ -21,6 +21,10 @@ corpus/catalogs/catalogs.db
 .DS_Store
 Thumbs.db
 
+# Session handoffs (docs/HANDOFF.md etc.) — written when chat context fills up,
+# not project documentation meant to live in the repo history.
+docs/
+
 # Editor
 .vscode/*
 !.vscode/extensions.json

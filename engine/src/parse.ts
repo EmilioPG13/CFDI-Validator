@@ -32,6 +32,12 @@ export interface ParsedCfdiConcepto {
    *  why comparing them requires decimalEquals/sumDecimal, never native === or +. */
   Importe: string;
   Descuento?: string;
+  /** Concepto-level Impuestos node — optional per the XSD (minOccurs=0), structurally
+   *  distinct from Comprobante-level ParsedCfdiImpuestos (no TotalImpuestos* summary
+   *  attributes here, and Concepto-level Retencion has a different required-field shape
+   *  than Comprobante-level Retencion — see ParsedCfdiConceptoRetencion). Added for
+   *  impuestos-concepto-rollup-consistencia. */
+  Impuestos?: ParsedCfdiConceptoImpuestos;
 }
 
 export interface ParsedCfdiConceptos {
@@ -42,6 +48,16 @@ export interface ParsedCfdiConceptos {
 }
 
 export interface ParsedCfdiTraslado {
+  /** Required per the XSD, both at Comprobante level (cfdv40.xsd lines 617-654) and at
+   *  Concepto level (lines 196-250, "misma estructura de use que a nivel Comprobante" —
+   *  registry.json's impuestos-concepto-rollup-consistencia source citation) — this
+   *  interface is deliberately shared by both levels rather than duplicated. */
+  Base: string;
+  Impuesto: string;
+  TipoFactor: string;
+  /** Required only when TipoFactor is "Tasa" or "Cuota" — absent for "Exento", at both
+   *  Comprobante and Concepto level. */
+  TasaOCuota?: string;
   /** Optional per the XSD: a Traslado with TipoFactor="Exento" has no Importe — see
    *  the impuestos-totales-consistencia rule spec for why this must be treated as 0
    *  in a sum, not as missing/invalid data. */
@@ -51,6 +67,22 @@ export interface ParsedCfdiTraslado {
 export interface ParsedCfdiRetencion {
   /** Required per the XSD — unlike Traslado, every Retencion always has an Importe. */
   Importe: string;
+  /** Required per the XSD (Comprobante-level Retencion is Impuesto+Importe only — no
+   *  Base/TipoFactor/TasaOCuota at this level, unlike Concepto-level Retencion; see
+   *  ParsedCfdiConceptoRetencion and registry.json's impuestos-concepto-rollup-consistencia
+   *  notes #3 on this asymmetry). */
+  Impuesto: string;
+}
+
+/** Concepto-level Retencion — structurally distinct from Comprobante-level
+ *  ParsedCfdiRetencion: the XSD also requires Base/TipoFactor/TasaOCuota at this level
+ *  (cfdv40.xsd lines 262-300), but impuestos-concepto-rollup-consistencia's spec is
+ *  explicit that grouping/matching uses only @Impuesto (Anexo 20 p. 38/123) — so, per
+ *  this file's "only type fields rules have needed so far" convention, Base/TipoFactor/
+ *  TasaOCuota are deliberately left untyped here. */
+export interface ParsedCfdiConceptoRetencion {
+  Impuesto: string;
+  Importe: string;
 }
 
 export interface ParsedCfdiImpuestos {
@@ -58,6 +90,15 @@ export interface ParsedCfdiImpuestos {
   TotalImpuestosRetenidos?: string;
   Traslados?: { Traslado: ParsedCfdiTraslado[] };
   Retenciones?: { Retencion: ParsedCfdiRetencion[] };
+}
+
+/** Concepto-level Impuestos — no TotalImpuestos* summary attributes (those only exist
+ *  at Comprobante level), and its Retencion rows are ParsedCfdiConceptoRetencion, not
+ *  ParsedCfdiRetencion — see both interfaces' doc comments for the exact asymmetry.
+ *  Added for impuestos-concepto-rollup-consistencia. */
+export interface ParsedCfdiConceptoImpuestos {
+  Traslados?: { Traslado: ParsedCfdiTraslado[] };
+  Retenciones?: { Retencion: ParsedCfdiConceptoRetencion[] };
 }
 
 /**
@@ -79,6 +120,12 @@ export interface ParsedCfdi {
   Moneda: string;
   TipoCambio?: string;
   TipoDeComprobante: string;
+  /** All three optional per the XSD — presence is conditionally forbidden by
+   *  TipoDeComprobante per Anexo 20 p. 11/123, enforced by tipodecomprobante-campos-
+   *  prohibidos, not by the XSD itself (none of these three use xs:assert). */
+  CondicionesDePago?: string;
+  FormaPago?: string;
+  MetodoPago?: string;
   Conceptos: ParsedCfdiConceptos;
   /** Comprobante-level Impuestos summary node — optional per the XSD (absent e.g.
    *  for TipoDeComprobante="N", Nómina — see total-comprobante-consistencia's spec). */

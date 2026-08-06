@@ -33,7 +33,14 @@ function minimalParsedCfdi(overrides: Partial<ParsedCfdi> = {}): ParsedCfdi {
         { ClaveProdServ: "81111500", ClaveUnidad: "E48", Importe: "5000.00" },
       ],
     },
-    Impuestos: { TotalImpuestosTrasladados: "800.00", Traslados: { Traslado: [{ Importe: "800.00" }] } },
+    Impuestos: {
+      TotalImpuestosTrasladados: "800.00",
+      Traslados: {
+        Traslado: [
+          { Base: "5000.00", Impuesto: "002", TipoFactor: "Tasa", TasaOCuota: "0.160000", Importe: "800.00" },
+        ],
+      },
+    },
     ...overrides,
   };
 }
