@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import type { ParsedCfdi } from "../src/parse.ts";
-import { cfdiCanceladoSat, emisorEfos69b } from "../src/rules/index.ts";
+import { cfdiCanceladoSat, emisorEfos69b, emisorEfos69bSat } from "../src/rules/index.ts";
 import type { ConsultaCfdiResult } from "../../sat-client/src/consultaCfdi.ts";
 import { EfosIndex } from "../../sat-client/src/efosIndex.ts";
 
@@ -51,6 +51,7 @@ function fakeConsultaResult(overrides: Partial<ConsultaCfdiResult>): ConsultaCfd
     found: true,
     vigente: null,
     cancelado: null,
+    efosEmisorEncontrado: null,
     ...overrides,
   };
 }
@@ -135,4 +136,70 @@ test("emisorEfos69b: Sentencia Favorable produces no Finding at all (a court rev
 test("emisorEfos69b: an RFC genuinely absent from the list produces no Finding", () => {
   const parsed = minimalParsedCfdi({ Emisor: { Rfc: RFC_NOT_ON_LIST, Nombre: "x", RegimenFiscal: "601" } });
   assert.deepEqual(emisorEfos69b(parsed, efosIndex), []);
+});
+
+// --- emisor-efos-69b-sat -----------------------------------------------------------
+
+const efosSatSpec = registry.find((r) => r.ruleId === "emisor-efos-69b-sat")!;
+
+test("emisorEfos69bSat: efosEmisorEncontrado=true produces exactly one error Finding matching the spec", () => {
+  const result = fakeConsultaResult({
+    found: true,
+    efosEmisorEncontrado: true,
+    raw: { codigoEstatus: "S - Comprobante obtenido satisfactoriamente", esCancelable: "Cancelable sin aceptación", estado: "Vigente", estatusCancelacion: "", validacionEfos: "100" },
+  });
+  const findings = emisorEfos69bSat(minimalParsedCfdi(), result);
+  assert.equal(findings.length, 1);
+  const [finding] = findings;
+  assert.equal(finding.ruleId, "emisor-efos-69b-sat");
+  assert.equal(finding.fieldPath, efosSatSpec.fieldPath);
+  assert.equal(finding.severity, "error");
+  assert.equal(finding.satReference, efosSatSpec.satReference);
+  assert.ok(finding.evidence);
+});
+
+test("emisorEfos69bSat: efosEmisorEncontrado=false produces no Finding", () => {
+  const result = fakeConsultaResult({
+    found: true,
+    efosEmisorEncontrado: false,
+    raw: { codigoEstatus: "S - Comprobante obtenido satisfactoriamente", esCancelable: "No cancelable", estado: "Vigente", estatusCancelacion: "", validacionEfos: "200" },
+  });
+  assert.deepEqual(emisorEfos69bSat(minimalParsedCfdi(), result), []);
+});
+
+test("emisorEfos69bSat: efosEmisorEncontrado=null produces no Finding — the third, undetermined state, not treated as false", () => {
+  const result = fakeConsultaResult({
+    found: true,
+    efosEmisorEncontrado: null,
+    raw: { codigoEstatus: "S - ok", esCancelable: "", estado: "Vigente", estatusCancelacion: "", validacionEfos: "" },
+  });
+  assert.deepEqual(emisorEfos69bSat(minimalParsedCfdi(), result), []);
+});
+
+test("emisorEfos69bSat: found=false (SAT has no record of this UUID) produces no Finding — not treated as 'Emisor not on the list'", () => {
+  const result = fakeConsultaResult({
+    found: false,
+    efosEmisorEncontrado: null,
+    raw: { codigoEstatus: "N - 602: Comprobante no encontrado.", esCancelable: "", estado: "No Encontrado", estatusCancelacion: "", validacionEfos: "" },
+  });
+  assert.deepEqual(emisorEfos69bSat(minimalParsedCfdi(), result), []);
+});
+
+test("emisorEfos69bSat and cfdiCanceladoSat are independent: a result with both cancelado=true and efosEmisorEncontrado=true produces exactly one Finding from each rule, never short-circuiting the other (spec condition step 5)", () => {
+  const result = fakeConsultaResult({
+    found: true,
+    vigente: false,
+    cancelado: true,
+    efosEmisorEncontrado: true,
+    raw: { codigoEstatus: "S - Comprobante obtenido satisfactoriamente", esCancelable: "No cancelable", estado: "Cancelado", estatusCancelacion: "Cancelado sin aceptación", validacionEfos: "100" },
+  });
+  const parsed = minimalParsedCfdi();
+
+  const cancelacionFindings = cfdiCanceladoSat(parsed, result);
+  const efosSatFindings = emisorEfos69bSat(parsed, result);
+
+  assert.equal(cancelacionFindings.length, 1);
+  assert.equal(cancelacionFindings[0].ruleId, "cfdi-cancelado-sat");
+  assert.equal(efosSatFindings.length, 1);
+  assert.equal(efosSatFindings[0].ruleId, "emisor-efos-69b-sat");
 });

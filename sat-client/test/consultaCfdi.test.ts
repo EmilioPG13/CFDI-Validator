@@ -1,6 +1,22 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { ConsultaCfdiClient } from "../src/consultaCfdi.ts";
+import { ConsultaCfdiClient, interpretEfosEmisorEncontrado } from "../src/consultaCfdi.ts";
+
+// Every code in the SAT's own documented table (consultaCfdi.ts header comment, "Documentación
+// del Servicio de Consulta de CFDI" v1.4, Noviembre 2022, p. 10-14) — a deterministic unit
+// test, not a live call, since the live endpoint can't be made to return every code on demand
+// without a real stamped invoice known to be on/off the EFOS Definitivo list.
+test("interpretEfosEmisorEncontrado: every documented ValidacionEFOS code classifies correctly", () => {
+  for (const code of ["100", "101", "104"]) {
+    assert.equal(interpretEfosEmisorEncontrado(code), true, `code ${code} should mean Emisor found`);
+  }
+  for (const code of ["102", "103", "200", "201"]) {
+    assert.equal(interpretEfosEmisorEncontrado(code), false, `code ${code} should mean Emisor not found`);
+  }
+  for (const code of ["", "601", "602", "garbage"]) {
+    assert.equal(interpretEfosEmisorEncontrado(code), null, `code ${code} should be unrecognized -> null`);
+  }
+});
 
 // Live integration test against the real SAT endpoint — deliberate, not an accident.
 // This project's whole premise is not trusting secondhand claims about what SAT
@@ -23,6 +39,12 @@ test(
     assert.equal(result.vigente, null);
     assert.equal(result.cancelado, null);
     assert.equal(result.raw.estado, "No Encontrado");
+    // No record of this UUID means SAT never populated ValidacionEFOS either (confirmed
+    // live, see consultaCfdi.ts's header comment) — "" is not one of the documented
+    // 100/101/104/102/103/200/201 codes, so this must fall through to "don't know", not
+    // false.
+    assert.equal(result.raw.validacionEfos, "");
+    assert.equal(result.efosEmisorEncontrado, null);
   },
 );
 

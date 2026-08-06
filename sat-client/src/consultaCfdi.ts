@@ -10,8 +10,47 @@ import { RateLimiter, withBackoff, type RetryOptions } from "./rateLimiter.ts";
 //             all plain strings, none formally enumerated by SAT. A garbage UUID
 //             (00000000-0000-0000-0000-000000000000) returned Estado="No Encontrado" with
 //             every other field empty — confirmed live, not assumed.
+//
+// ValidacionEFOS semantics — closed 2026-08-05 against the SAT's OWN official PDF (this
+// one *is* machine-readable text, unlike the scanned doc above), retrieved over plain HTTP
+// per this project's known omawww.sat.gob.mx TLS gotcha (see CLAUDE.md):
+//   "Documentación del Servicio de Consulta de CFDI", Versión 1.4, Fecha: Noviembre 2022,
+//   http://omawww.sat.gob.mx/tramitesyservicios/Paginas/documentos/Documentacion_WS_Consulta_CFDI_v1.4.pdf,
+//   sección 3 "Mensajes de Respuesta" > "Mensajes de validación del RFC Emisor" (p. 10-15,
+//   corrected from an initial 10-14 estimate — confirmed by physical page count via
+//   pdftotext's own form-feed page breaks, código=201 spills onto p. 15),
+//   text extracted with `pdftotext -layout`, not paraphrased from a third-party blog.
+// ValidacionEFOS carries one of these numeric codes as a string:
+//   100, 101, 104 — "la validación del RFC Emisor del CFDI SE ENCUENTRE dentro de la lista
+//                    de Empresa que Factura Operaciones Simuladas (EFOS)" — and the
+//                    per-code message text explicitly ties this to "el listado de
+//                    definitivas", i.e. the SAME "Definitivo" tier (Art. 69-B, párrafos
+//                    primero al quinto) that emisor-efos-69b's static CSV check already
+//                    treats as severity 'error' — this is that same legal fact, fetched
+//                    live per query instead of from a CSV snapshot.
+//   102, 103, 200, 201 — RFC Emisor NOT found on that list ("no se encuentre dentro de
+//                    la lista"). 200/201 are the plain case; 102/103 both still say the
+//                    Emisor specifically was NOT found (only a "cuenta de terceros" RFC
+//                    was, which this project doesn't parse from CFDI XML and is out of
+//                    scope) — grouped with 200/201 for that reason.
+//   anything else (including "", the No-Encontrado case) — unrecognized/absent, treated
+//                    as "don't know", same nullable philosophy as `vigente`/`cancelado`
+//                    below, not smoothed into a false negative.
+// Known gap, not resolved by this doc: SAT's own PDF text describes WHICH list (the
+// "definitivas" one) but not WHEN it's evaluated against — at CFDI issuance, at the time
+// SAT received the CFDI, or at the moment of this live query. Third-party client libraries
+// (phpcfdi/cfdiutils, nodecfdi/sat-estado-cfdi) flag the exact same open question
+// independently, which is corroborating, not resolving — treat this field as "Emisor RFC
+// is on the Definitivo EFOS list as of right now, at query time" (the only reading
+// consistent with it being a live, stateless service call), not as a historical fact about
+// the invoice's issuance date.
 const ENDPOINT = "https://consultaqr.facturaelectronica.sat.gob.mx/ConsultaCFDIService.svc";
 const SOAP_ACTION = "http://tempuri.org/IConsultaCFDIService/Consulta";
+
+/** Codes confirmed by the SAT's own PDF (see header comment) to mean "RFC Emisor IS on
+ *  the EFOS Definitivo list" vs "is NOT" — every other value (including "") is unknown. */
+const EFOS_EMISOR_ENCONTRADO_CODES = new Set(["100", "101", "104"]);
+const EFOS_EMISOR_NO_ENCONTRADO_CODES = new Set(["102", "103", "200", "201"]);
 
 export interface ConsultaCfdiParams {
   rfcEmisor: string;
@@ -42,6 +81,15 @@ export interface ConsultaCfdiResult {
    */
   vigente: boolean | null;
   cancelado: boolean | null;
+  /**
+   * Interpreted from `raw.validacionEfos` (see this file's header comment for the code
+   * table and its citation) — true when the Emisor RFC is, right now, on the SAT's own
+   * "Definitivo" EFOS list (Art. 69-B, párrafos primero-quinto CFF); false when SAT's
+   * live check says it's not; null when the code is unrecognized or absent (e.g. the
+   * UUID wasn't found at all) — same "don't know" philosophy as `vigente`/`cancelado`,
+   * not defaulted to a false negative.
+   */
+  efosEmisorEncontrado: boolean | null;
 }
 
 function buildExpresionImpresa({ rfcEmisor, rfcReceptor, total, uuid }: ConsultaCfdiParams): string {
@@ -81,11 +129,21 @@ function parseSoapResponse(xml: string): ConsultaCfdiRaw {
   };
 }
 
+/** Exported for direct unit testing against the full documented code table (see this
+ *  file's header comment) without needing a live network round-trip for every case —
+ *  the live test can only exercise the "" / not-found branch deterministically. */
+export function interpretEfosEmisorEncontrado(validacionEfos: string): boolean | null {
+  if (EFOS_EMISOR_ENCONTRADO_CODES.has(validacionEfos)) return true;
+  if (EFOS_EMISOR_NO_ENCONTRADO_CODES.has(validacionEfos)) return false;
+  return null;
+}
+
 function interpret(raw: ConsultaCfdiRaw): ConsultaCfdiResult {
   const found = raw.estado !== "No Encontrado" && raw.estado !== "";
   const vigente = !found ? null : raw.estado === "Vigente" ? true : raw.estado === "Cancelado" ? false : null;
   const cancelado = vigente === null ? null : !vigente;
-  return { raw, found, vigente, cancelado };
+  const efosEmisorEncontrado = interpretEfosEmisorEncontrado(raw.validacionEfos);
+  return { raw, found, vigente, cancelado, efosEmisorEncontrado };
 }
 
 export interface ConsultaCfdiClientOptions {
