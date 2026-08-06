@@ -62,8 +62,12 @@ the pipeline is fixed code, agents claim rows from a `status`-column queue, same
   something to derive from the Anexo 20 PDF by hand.
 - The 69-B list (`corpus/efos/listado_completo_69b.csv`) fetched 2026-08-04 self-reports as
   current to **2025-12-31** — over seven months stale against a list the SAT updates several
-  times a month. Known gap, not yet resolved; see `corpus/README.md`. Don't present it as
-  live without fixing this first.
+  times a month, and the CSV itself hasn't been re-fetched since. **Mitigated 2026-08-05**
+  by `emisor-efos-69b-sat`, which cross-checks live per invoice via `ConsultaCFDIService`
+  (same round-trip `cfdi-cancelado-sat` already makes) — but that only covers the
+  "Definitivo" tier; Presunto/Desvirtuado/Sentencia Favorable still only exist in this
+  stale CSV. Don't present the CSV alone as live; see `corpus/README.md` for the full
+  picture and what's still open.
 - Ground-truth source data (XSDs, catalogs, Anexo 20, 69-B list) lives in `corpus/`, is
   fetched from public mirrors/SAT directly, and is documented with fetch dates in
   `corpus/README.md` — treat that file as the changelog for this data, keep it updated on

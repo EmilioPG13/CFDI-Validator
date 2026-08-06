@@ -75,15 +75,28 @@ carries `Situación del contribuyente` as a column, so it already covers presunt
 desvirtuado / definitivo / sentencia favorable in one table — no need for the four separate
 per-status lists the SAT also publishes.
 
-**⚠️ Freshness gap, not yet resolved:** the file's own header states *"Información
-actualizada al 31 de diciembre de 2025."* Fetched 2026-08-04 — **over seven months stale**
-against a list the SAT is documented to update several times a month. This is the exact risk
-the product is supposed to catch, so shipping a demo against this snapshot without flagging
-it would be dishonest. Before Phase 2 ships the 69-B matcher: find the actually-current
-source (the `omawww.../ListCompleta69B.html` listing page redirects to a SharePoint-style
-JS-rendered index that doesn't scrape with `curl`; try rendering it with a headless browser,
-or check whether `datos.gob.mx`'s `contribuyentes_incumplidos` dataset is fresher) and record
-whatever the real update cadence of that endpoint turns out to be.
+**⚠️ Freshness gap, mitigated but not resolved:** the file's own header states
+*"Información actualizada al 31 de diciembre de 2025."* Fetched 2026-08-04 — **over seven
+months stale** against a list the SAT is documented to update several times a month, and
+this file itself hasn't been re-fetched since. This is the exact risk the product is
+supposed to catch, so a report relying on this CSV alone without flagging its as-of date
+would be dishonest.
+
+Mitigation shipped 2026-08-05: `emisor-efos-69b-sat` (`engine/rules/registry.json`,
+`engine/src/rules/emisorEfos69bSat.ts`) cross-checks the Emisor RFC against SAT's own
+`ConsultaCFDIService.ValidacionEFOS` field **live, per invoice, at query time** — same
+network round-trip `cfdi-cancelado-sat` already makes, so zero extra cost. This closes
+the staleness gap for the "Definitivo" tier specifically (the only tier `ValidacionEFOS`
+can express), but does **not** replace this CSV: only the CSV carries Presunto /
+Desvirtuado / Sentencia Favorable, and reconciling the two when they disagree (stale CSV
+says clean but live says found, or vice versa) is still an open product decision — see
+`emisor-efos-69b-sat`'s own `notes` in registry.json. **Still worth doing**, lower
+priority now that the live check exists: find an actually-current bulk source for this
+CSV itself (the `omawww.../ListCompleta69B.html` listing page redirects to a
+SharePoint-style JS-rendered index that doesn't scrape with `curl`; try rendering it with
+a headless browser, or check whether `datos.gob.mx`'s `contribuyentes_incumplidos`
+dataset is fresher) so the Presunto/Desvirtuado/Sentencia Favorable tiers aren't stuck on
+a one-time snapshot either.
 
 ## Re-fetch commands
 
