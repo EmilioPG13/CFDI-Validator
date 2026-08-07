@@ -17,9 +17,17 @@ already uses successfully. `sat-client` has zero external dependencies (`package
 but Vercel's project settings must be configured with **"Include source files outside of
 the Root Directory in the Build"** enabled (Vercel's own documented setting for exactly
 this monorepo shape — `frontend/` as the deployed Root Directory, importing a sibling
-package that lives outside it). This has NOT been verified against a real Vercel
-deployment as of Phase 4d — it's a known residual risk, not a confirmed fact. If a
-deployment fails to resolve this import, that setting is the first thing to check.
+package that lives outside it; the underlying API field is `sourceFilesOutsideRootDirectory`
+— confirmed against Vercel's own REST API schema docs, Phase 4g). Edge Functions are
+bundled (esbuild-style) at build time, not run as raw source, so as long as that toggle is
+on and the sibling file is present on disk during the build, the relative import should
+resolve into the function bundle the same way a Node bundler would. See `frontend/vercel.json`
+for the full monorepo build config (install chain across `engine`/`sat-client`/`frontend`,
+Node version pin) and `CLAUDE.md`'s "Vercel deployment config" gotcha for the full
+reasoning. **Still NOT verified against a real Vercel deployment as of Phase 4g** — the
+config is now in place and locally simulated end-to-end, but Vercel's own build container
+hasn't actually run it yet. If a deployment fails to resolve this import, that toggle is
+still the first thing to check.
 
 ## Local testing
 

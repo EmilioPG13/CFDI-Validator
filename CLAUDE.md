@@ -127,6 +127,37 @@ the pipeline is fixed code, agents claim rows from a `status`-column queue, same
   type shared between the Node-only and browser-safe sides of this codebase: put it in its
   own zero-import file, don't assume `import type` is free just because nothing at runtime
   touches the Node-only branch.**
+- **Vercel deployment config (`frontend/vercel.json`), Phase 4g.** Root Directory on Vercel
+  is `frontend`, but the build needs its siblings (`engine/`, `sat-client/`, and `corpus/`
+  via `engine/`'s postinstall) — requires the dashboard's "Include source files outside of
+  the Root Directory in the Build" toggle (API field `sourceFilesOutsideRootDirectory`;
+  not settable from `vercel.json` itself, confirmed via Vercel's own REST API schema docs —
+  this is a one-time manual step when the project is created). `installCommand` in
+  `vercel.json` chains `npm install --include=dev --prefix ../engine` (runs `engine`'s
+  postinstall: decompresses `corpus/catalogs/catalogs.db.bz2` and rebuilds
+  `catalog-bundle/`) → same for `../sat-client` → then `frontend` itself. `--include=dev`
+  is explicit on all three, not assumed default, because `unbzip2-stream` (needed by
+  `engine`'s postinstall) and the whole TS toolchain are devDependencies, and it's
+  undocumented whether Vercel's install step sets `NODE_ENV=production` (which would
+  otherwise silently skip them). `engines.node: "24.x"` pinned in `frontend/package.json`
+  (Vercel reads it from the Root Directory's own `package.json`; this overrides whatever
+  Node version Project Settings has selected) — needed because `build-catalog-bundle.mjs`
+  uses `node:sqlite`'s `DatabaseSync` with no `--experimental-sqlite` flag anywhere in the
+  scripts, and that's only confirmed working, right now, on the exact local version this
+  was verified against: v24.14.0. **Noted, not chased further**: `npm install --prefix
+  ../engine` prints an `EBADENGINE` warning because `@nodecfdi/cfdi-to-json` declares
+  `node: '>=18 <=22 || ^16'` in its own `package.json` — harmless (npm treats EBADENGINE as
+  advisory, exit code 0, and the full local test suite already passes on v24.14.0 today),
+  but if a future Node upgrade ever breaks that package for real, this is the first place
+  to look. SPA routing needs a catch-all rewrite (`vercel.json`'s `rewrites`) because
+  `main.tsx` uses React Router's `BrowserRouter`, not a hash router — without it, a direct
+  load or refresh of `/auditoria` 404s instead of serving `index.html`. **Full chain
+  verified locally** (simulated the exact three-command `installCommand` from a `frontend/`
+  cwd, then a real `npm run build`, then the full test suite — all green) but **NOT yet
+  verified against an actual Vercel build container** — that's the one part of this that
+  local simulation can't fully replicate (Vercel's own Node build image, its lifecycle-script
+  execution environment, and the real `sourceFilesOutsideRootDirectory` toggle). First real
+  end-to-end test happens on the first real deploy.
 
 ## Dev-time subagents
 
