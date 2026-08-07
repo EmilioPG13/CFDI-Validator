@@ -18,6 +18,15 @@ corpus/catalogs/catalogs.db
 # someone refreshes it and doesn't remember this script exists.
 engine/catalog-bundle/
 
+# frontend/api/*.js(.map) are esbuild output generated from frontend/api-src/*.ts by
+# scripts/bundle-api.mjs (prebuild) -- necessary so Vercel's Node.js Function builder finds
+# a fully self-contained file with no cross-package relative imports for it to fail on (see
+# CLAUDE.md's Vercel deployment gotcha and frontend/api/README.md). api-src/ is the real,
+# hand-authored, tested source; frontend/api/README.md itself is NOT matched by this glob
+# and stays tracked.
+frontend/api/*.js
+frontend/api/*.js.map
+
 # Env / secrets
 .env
 .env.local

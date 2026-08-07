@@ -30,11 +30,18 @@ import {
  * the function's own directory tree — confirmed live: it built fine (files were present,
  * `sourceFilesOutsideRootDirectory` was on, `tsc` typechecked clean) but deploy failed with
  * `NOW_SANDBOX_WORKER_EDGE_FUNCTION_UNSUPPORTED_MODULES` pointing at the `../../sat-client`
- * import below. Node.js Functions use `@vercel/nft`'s filesystem-based tracer instead,
- * which does support this exact monorepo shape (relative imports outside the function's
- * own directory) — the standard reason cross-package imports in `api/` work as Node.js
- * functions but not Edge ones. The Web-standard handler shape below needs no changes for
- * either runtime — only this `config.runtime` value picks which one executes it.
+ * import below. The Web-standard handler shape below needs no changes for either runtime —
+ * only this `config.runtime` value picks which one executes it. **Switching to `nodejs`
+ * alone was NOT sufficient**, though — confirmed by a second real deploy that succeeded at
+ * build time but then crashed on its first real invocation with `Error
+ * [ERR_MODULE_NOT_FOUND]: Cannot find module '/var/task/sat-client/src/consultaCfdi.ts'`.
+ * Vercel's Node.js Function builder transpiles only the entrypoint `.ts` file; it does not
+ * bundle a transitive `.ts` import either. This file (and `../../sat-client/*`) never
+ * actually reaches Vercel as-is: `../scripts/bundle-api.mjs` pre-bundles this whole
+ * directory (`api-src/`) into self-contained `.js` in `../api/` via `esbuild` before
+ * Vercel's build ever runs — see `../api/README.md` for the full incident and why neither
+ * runtime's zero-config builder was ever going to trace this monorepo-external import on
+ * its own.
  *
  * Rate limiting: reuses `sat-client`'s own `ConsultaCfdiClient` (rate limiter + backoff,
  * already implemented and tested — not reimplemented here), instantiated once at MODULE

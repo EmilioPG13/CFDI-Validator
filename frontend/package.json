@@ -7,14 +7,14 @@
     "node": "24.x"
   },
   "scripts": {
-    "predev": "node scripts/sync-static-assets.mjs",
+    "predev": "node scripts/sync-static-assets.mjs && node scripts/bundle-api.mjs",
     "dev": "vite",
-    "prebuild": "node scripts/sync-static-assets.mjs",
+    "prebuild": "node scripts/sync-static-assets.mjs && node scripts/bundle-api.mjs",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
     "typecheck": "tsc -b",
-    "test": "node --experimental-strip-types --test api/**/*.test.ts src/lib/**/*.test.ts"
+    "test": "node --experimental-strip-types --test api-src/**/*.test.ts src/lib/**/*.test.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -72,6 +72,7 @@
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.1",
     "autoprefixer": "^10.4.23",
+    "esbuild": "^0.27.2",
     "eslint": "^9.39.1",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",
