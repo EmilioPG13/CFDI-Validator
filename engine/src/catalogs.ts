@@ -1,27 +1,14 @@
 import { DatabaseSync } from "node:sqlite";
+import type { CatalogRow, CatalogSource } from "./catalogTypes.ts";
 
-export interface CatalogRow {
-  id: string;
-  vigencia_desde: string;
-  vigencia_hasta: string;
-  [key: string]: unknown;
-}
-
-/**
- * The one capability every rule actually needs from a catalog backend — extracted
- * from `SatCatalogs` (Phase 4) so rules can be typed against this instead of the
- * concrete sqlite-backed class. `SatCatalogs` (below, Node/CLI, backed by
- * corpus/catalogs/catalogs.db via node:sqlite) and `BrowserCatalogs`
- * (catalogsBrowser.ts, backed by a precomputed JSON bundle, no WASM SQL engine
- * needed — see that file's header comment for why) both implement this and
- * nothing else; no rule has ever called anything but `findVigente` on a catalogs
- * param (verified by grep across engine/src/rules/ before this refactor — `close()`
- * is a resource-cleanup concern for whoever constructs a SatCatalogs, not something
- * a rule function needs).
- */
-export interface CatalogSource {
-  findVigente<T extends CatalogRow = CatalogRow>(table: string, id: string, asOfDate: string): T | undefined;
-}
+// Re-exported for backward compatibility / anyone importing from this file directly —
+// but note every file in the CatalogSource-typed dependency graph that the BROWSER
+// pipeline touches (rules/*, rules/index.ts, pipeline.ts, catalogsBrowser.ts) imports
+// these from catalogTypes.ts instead, specifically to avoid pulling this file's own
+// node:sqlite import into a browser typecheck — see catalogTypes.ts's header comment
+// for the full reasoning (a real problem hit and fixed in Phase 4e, not a preemptive
+// guess).
+export type { CatalogRow, CatalogSource };
 
 /**
  * Thin wrapper over corpus/catalogs/catalogs.db (phpcfdi/resources-sat-catalogs).

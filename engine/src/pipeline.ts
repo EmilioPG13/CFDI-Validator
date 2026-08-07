@@ -1,7 +1,7 @@
 import type { XsdValidator } from "libxml2-wasm";
 import type { Finding } from "./finding.ts";
 import { parseCfdi, type ParsedCfdi } from "./parse.ts";
-import type { CatalogSource } from "./catalogs.ts";
+import type { CatalogSource } from "./catalogTypes.ts";
 import { validateXmlBrowser } from "./xsdBrowser.ts";
 import { rules, cfdiCanceladoSat, emisorEfos69b, emisorEfos69bSat } from "./rules/index.ts";
 import type { EfosIndex } from "../../sat-client/src/efosIndex.ts";
@@ -75,10 +75,9 @@ export async function auditCfdiXml(xmlBytes: Uint8Array, deps: PipelineDeps): Pr
 
   let parsed: ParsedCfdi;
   try {
-    // TextDecoder, not Buffer -- same portability reasoning as xsdBrowser.ts throughout
-    // this phase. parseCfdi accepts a string directly (its Buffer branch is Node-only,
-    // via Buffer#toString, and this module doesn't touch it).
-    parsed = parseCfdi(new TextDecoder().decode(xmlBytes));
+    // parseCfdi accepts Uint8Array directly (widened in this same phase, for this same
+    // reason — see parse.ts's own comment on why it no longer types this as Buffer).
+    parsed = parseCfdi(xmlBytes);
   } catch (err) {
     return {
       xsdValid: true,

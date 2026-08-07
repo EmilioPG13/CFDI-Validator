@@ -1,7 +1,7 @@
 import type { Finding } from "../finding.ts";
 import type { ParsedCfdi, ParsedCfdiConceptoRetencion, ParsedCfdiTraslado } from "../parse.ts";
 import { fechaAsDateOnly } from "../parse.ts";
-import type { CatalogRow, CatalogSource } from "../catalogs.ts";
+import type { CatalogRow, CatalogSource } from "../catalogTypes.ts";
 import { decimalEquals, sumDecimal } from "../decimal.ts";
 
 // Verbatim from engine/rules/registry.json, ruleId "impuestos-concepto-rollup-consistencia"

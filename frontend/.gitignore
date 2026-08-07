@@ -12,6 +12,13 @@ dist
 dist-ssr
 *.local
 
+# Copied from ../corpus/xsd/, ../engine/catalog-bundle/, and ../corpus/efos/ by
+# scripts/sync-static-assets.mjs (predev/prebuild) -- regenerate, don't hand-edit or
+# commit a second copy.
+public/xsd
+public/catalog-bundle
+public/efos
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

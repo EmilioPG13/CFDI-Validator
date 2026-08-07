@@ -1,4 +1,4 @@
-import type { CatalogRow, CatalogSource } from "./catalogs.ts";
+import type { CatalogRow, CatalogSource } from "./catalogTypes.ts";
 
 /**
  * Browser-side counterpart to `SatCatalogs` (catalogs.ts, node:sqlite-backed) — same

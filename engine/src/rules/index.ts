@@ -1,6 +1,6 @@
 import type { Finding } from "../finding.ts";
 import type { ParsedCfdi } from "../parse.ts";
-import type { CatalogSource } from "../catalogs.ts";
+import type { CatalogSource } from "../catalogTypes.ts";
 import type { ConsultaCfdiResult } from "../../../sat-client/src/consultaCfdi.ts";
 import type { EfosIndex } from "../../../sat-client/src/efosIndex.ts";
 import { regimenUsoCompat } from "./regimenUsoCompat.ts";

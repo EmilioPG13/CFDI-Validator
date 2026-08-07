@@ -56,11 +56,13 @@ the pipeline is fixed code, agents claim rows from a `status`-column queue, same
   meaning the buffer map's keys must be pre-computed to match exactly what that resolution
   will produce. Confirmed working (a synthetic `file:///cfd/...` base, mirroring
   `corpus/xsd/`'s own relative layout, resolves correctly) via a real spike before writing
-  `xsdBrowser.ts` — not assumed from the type defs alone. Still unverified as of Phase 4b:
-  a real Vite/browser bundle actually loading and running this (proven in Node only so
-  far) — libxml2-wasm's compiled WASM glue (`libxml2raw.mjs`) is a dual-target Emscripten
-  build with both Node and browser code paths, which is a strong signal but not a
-  substitute for actually running it in a bundler.
+  `xsdBrowser.ts` — not assumed from the type defs alone. **Verified in a real Vite build,
+  Phase 4e**: `npm run build` in `frontend/` (which imports `engine/src/pipeline.ts`,
+  pulling in `xsdBrowser.ts`, all 13 rules, and `libxml2-wasm` from `engine/node_modules/`
+  transitively via plain relative paths, no npm workspace) succeeds — 112 modules
+  transformed, one ~1.5 MB/598 KB-gzip JS bundle (the WASM binary bundles inline, no
+  separate `.wasm` asset in `dist/`). Confirms both the buffer-provider mechanism above
+  AND the cross-package relative-import pattern work in a real bundler, not just Node.
 - `cfdv40.xsd` alone can never validate a real CFDI: its `Complemento` node is an `xs:any`
   wildcard, and the XSD spec's default `processContents="strict"` means the validator must
   already have the complement's own schema loaded to accept it at all. `cfdv40.xsd` doesn't
@@ -89,8 +91,8 @@ the pipeline is fixed code, agents claim rows from a `status`-column queue, same
   fetched from public mirrors/SAT directly, and is documented with fetch dates in
   `corpus/README.md` — treat that file as the changelog for this data, keep it updated on
   every re-fetch.
-- **Rules are typed against `CatalogSource` (`engine/src/catalogs.ts`), never the concrete
-  `SatCatalogs`** — `SatCatalogs` (node:sqlite-backed, CLI/tests) and `BrowserCatalogs`
+- **Rules are typed against `CatalogSource` (`engine/src/catalogTypes.ts`), never the
+  concrete `SatCatalogs`** — `SatCatalogs` (node:sqlite-backed, CLI/tests) and `BrowserCatalogs`
   (`engine/src/catalogsBrowser.ts`, JSON-bundle-backed, Phase 4) both implement it, and no
   rule has ever needed anything but `.findVigente()`. **`engine/catalog-bundle/*.json`
   (gitignored, regenerated on `npm install` via `engine/scripts/build-catalog-bundle.mjs`)
@@ -103,6 +105,28 @@ the pipeline is fixed code, agents claim rows from a `status`-column queue, same
   proves both backends produce byte-identical `Finding[]` for every rule × fixture — treat
   a failure there as the bundle (or the trimmed-column list) having drifted from what a rule
   actually needs, not as a flaky test.
+- **TypeScript must fully parse+check an ENTIRE source file to resolve even a single
+  `import type` from it — there's no partial-file loading.** Hit in Phase 4e: `catalogs.ts`
+  imports `node:sqlite` at its own top level; every rule file did `import type {
+  CatalogSource } from "../catalogs.ts"`, which worked fine under `engine/`'s own
+  Node-context tsconfig (has `node` types) but broke the instant `frontend/`'s
+  browser-context typecheck (deliberately no `node` types — see `tsconfig.api.json`'s own
+  comment on why) tried to type-check `engine/src/pipeline.ts`, which imports the full
+  `rules` array, which transitively touches every rule file's `import type` of
+  `CatalogSource` from `catalogs.ts` — Node's own `Cannot find module 'node:sqlite'`
+  surfaced even though nothing actually *calls* `DatabaseSync` in that whole chain. Fix:
+  `CatalogRow`/`CatalogSource` now live in `engine/src/catalogTypes.ts` (zero imports of
+  any kind); `catalogs.ts` re-exports them for anyone still importing from there, but every
+  file the browser pipeline touches (all rules, `rules/index.ts`, `pipeline.ts`,
+  `catalogsBrowser.ts`) imports directly from `catalogTypes.ts` instead. Same reasoning
+  extends to `parse.ts`: `parseCfdi` was typed `(xml: string | Buffer)` — `Buffer` is a
+  Node global type, so merely importing `parseCfdi`'s signature (regardless of which
+  branch is actually called) required it to be resolvable. Widened to `string |
+  Uint8Array` (`Buffer` already satisfies `Uint8Array`, so this is backward-compatible),
+  using `TextDecoder` instead of `Buffer#toString` internally. **Lesson for any future
+  type shared between the Node-only and browser-safe sides of this codebase: put it in its
+  own zero-import file, don't assume `import type` is free just because nothing at runtime
+  touches the Node-only branch.**
 
 ## Dev-time subagents
 

@@ -1,6 +1,6 @@
 import type { Finding } from "../finding.ts";
 import type { ParsedCfdi } from "../parse.ts";
-import type { CatalogSource } from "../catalogs.ts";
+import type { CatalogSource } from "../catalogTypes.ts";
 
 // Verbatim from engine/rules/registry.json, ruleId "moneda-tipocambio-consistencia" —
 // do not paraphrase; if this ever looks wrong, flag it back to cfdi-domain rather than

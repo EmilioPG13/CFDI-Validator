@@ -37,7 +37,7 @@ const KNOWN_SITUACIONES = new Set<string>([
  * SAT column reorder breaks loudly (missing named column) instead of silently
  * misreading data into the wrong field.
  */
-export function loadEfosIndex(csvBuffer: Buffer): { records: EfosRecord[]; meta: EfosIndexMeta } {
+export function loadEfosIndex(csvBuffer: Uint8Array): { records: EfosRecord[]; meta: EfosIndexMeta } {
   const text = new TextDecoder("windows-1252").decode(csvBuffer);
   const rows = parseCsv(text).filter((r) => r.length > 1 || (r.length === 1 && r[0] !== ""));
 
@@ -90,7 +90,7 @@ export class EfosIndex {
   private readonly byRfc = new Map<string, EfosRecord>();
   readonly meta: EfosIndexMeta;
 
-  constructor(csvBuffer: Buffer) {
+  constructor(csvBuffer: Uint8Array) {
     const { records, meta } = loadEfosIndex(csvBuffer);
     this.meta = meta;
     for (const record of records) {

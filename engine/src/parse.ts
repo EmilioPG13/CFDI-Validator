@@ -135,8 +135,13 @@ export interface ParsedCfdi {
 
 const converter = new JsonConverter();
 
-export function parseCfdi(xml: string | Buffer): ParsedCfdi {
-  const xmlStr = typeof xml === "string" ? xml : xml.toString("utf-8");
+// Uint8Array, not Buffer: a plain Uint8Array (what a browser's fetch()/File APIs produce)
+// doesn't have Buffer's methods, notably #toString(encoding) — used below via TextDecoder
+// instead, which works identically for a real Node Buffer too (Buffer IS a Uint8Array).
+// Widened in Phase 4e specifically so this file has no Node-only type in its own public
+// signature — pipeline.ts (browser-side) calls this directly with fetch()-sourced bytes.
+export function parseCfdi(xml: string | Uint8Array): ParsedCfdi {
+  const xmlStr = typeof xml === "string" ? xml : new TextDecoder("utf-8").decode(xml);
   // convertToRecord<T extends SafeNestedRecord>(...): T — SafeNestedRecord isn't exported
   // from the package's public entrypoint, and ParsedCfdi's typed sub-fields (Emisor,
   // Receptor) don't structurally satisfy its index signature anyway. Left uninstantiated,
