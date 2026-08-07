@@ -20,10 +20,21 @@ import {
  * permissive origin costs nothing).
  *
  * Written against the Web-standard `Request`/`Response` (not a framework-specific
- * `(req, res)` signature) so it works as a Vercel Edge Function (`export const config`
- * below) with minimal changes if ever moved to Netlify's newer Web-standard Functions API
- * instead — matching the "keep it easy to move later" preference from this session's
- * hosting decision.
+ * `(req, res)` signature) so it's portable across Vercel's own runtimes and to Netlify's
+ * newer Web-standard Functions API with minimal changes — matching the "keep it easy to
+ * move later" preference from this session's hosting decision.
+ *
+ * Runtime: **Node.js, not Edge** — flipped from the original `runtime: "edge"` on the
+ * first real deploy attempt (Phase 4g). Edge Functions are bundled via a stricter,
+ * Cloudflare-Workers-style bundler that refuses to inline a relative import living outside
+ * the function's own directory tree — confirmed live: it built fine (files were present,
+ * `sourceFilesOutsideRootDirectory` was on, `tsc` typechecked clean) but deploy failed with
+ * `NOW_SANDBOX_WORKER_EDGE_FUNCTION_UNSUPPORTED_MODULES` pointing at the `../../sat-client`
+ * import below. Node.js Functions use `@vercel/nft`'s filesystem-based tracer instead,
+ * which does support this exact monorepo shape (relative imports outside the function's
+ * own directory) — the standard reason cross-package imports in `api/` work as Node.js
+ * functions but not Edge ones. The Web-standard handler shape below needs no changes for
+ * either runtime — only this `config.runtime` value picks which one executes it.
  *
  * Rate limiting: reuses `sat-client`'s own `ConsultaCfdiClient` (rate limiter + backoff,
  * already implemented and tested — not reimplemented here), instantiated once at MODULE
@@ -33,7 +44,7 @@ import {
  * store like Redis) — acceptable for a portfolio demo's expected traffic, revisit if this
  * ever needs to survive real concurrent load.
  */
-export const config = { runtime: "edge" };
+export const config = { runtime: "nodejs" };
 
 function isNonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;

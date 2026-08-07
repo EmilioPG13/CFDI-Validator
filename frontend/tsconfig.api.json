@@ -2,11 +2,16 @@
   "compilerOptions": {
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.api.tsbuildinfo",
     "target": "ES2023",
-    // DOM, not "node": api/ files run on Vercel's Edge runtime (see api/consulta-sat.ts's
-    // `export const config = { runtime: "edge" }`) — Web-standard Request/Response/fetch/
-    // TextEncoder are globals there, node:* built-ins are not. Don't add "node" to types
-    // here even though the repo's other packages do; that would silently let a node:*
-    // import typecheck clean and then fail at deploy time.
+    // DOM, not "node": api/ files are written against the Web-standard Request/Response/
+    // fetch/TextEncoder API (see api/consulta-sat.ts's own header comment), deliberately
+    // portable between Vercel's Node.js and Edge runtimes with zero code changes — only
+    // `config.runtime` picks which one executes it (currently "nodejs", flipped from
+    // "edge" on the first real deploy attempt, Phase 4g, because Edge's bundler doesn't
+    // trace relative imports outside the function's own directory the way Node.js's
+    // @vercel/nft tracer does). Don't add "node" to types here even though the repo's
+    // other packages do and even though the current runtime has node:* built-ins
+    // available — that would silently let a node:* import typecheck clean here and then
+    // break portability back to Edge (or to a browser context) the moment one is added.
     "lib": ["ES2023", "DOM"],
     "module": "ESNext",
     "skipLibCheck": true,
