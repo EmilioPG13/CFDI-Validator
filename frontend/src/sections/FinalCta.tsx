@@ -1,3 +1,5 @@
+import { Link } from 'react-router'
+
 export default function FinalCta() {
   return (
     <section id="demo" className="border-b border-[var(--hairline)]">
@@ -20,13 +22,12 @@ export default function FinalCta() {
           <div className="lg:col-span-5">
             <div className="corner-box bg-[var(--paper-raised)] p-7 sm:p-8">
               <span className="cb-extra" aria-hidden="true" />
-              {/* TODO: apuntar este enlace a la URL real de la demo cuando esté publicada */}
-              <a
-                href="#"
+              <Link
+                to="/auditoria?demo=1"
                 className="block bg-[var(--azul)] px-6 py-4 text-center text-[16px] font-semibold text-white transition-colors hover:bg-[var(--azul-deep)]"
               >
                 Abrir la demo con datos de ejemplo
-              </a>
+              </Link>
               <dl className="font-mono-data mt-6 space-y-2.5 text-[11px] uppercase tracking-[0.1em] text-[var(--ink-soft)]">
                 <div className="flex justify-between gap-4 border-b border-[var(--hairline)] pb-2.5">
                   <dt>Registro</dt>

@@ -1,3 +1,5 @@
+import { Link } from 'react-router'
+
 function LockIcon() {
   return (
     <svg
@@ -97,12 +99,12 @@ export default function Hero() {
           </div>
 
           <div className="mt-9 flex flex-wrap items-center gap-4">
-            <a
-              href="#demo"
+            <Link
+              to="/auditoria?demo=1"
               className="bg-[var(--azul)] px-6 py-3.5 text-[15px] font-semibold text-white transition-colors hover:bg-[var(--azul-deep)]"
             >
               Probar la demo con datos de ejemplo
-            </a>
+            </Link>
             <a
               href="#como-funciona"
               className="border border-[var(--hairline-strong)] px-6 py-3.5 text-[15px] font-semibold text-[var(--ink)] transition-colors hover:border-[var(--ink)]"

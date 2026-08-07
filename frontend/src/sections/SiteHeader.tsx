@@ -1,3 +1,5 @@
+import { Link } from 'react-router'
+
 const NAV = [
   { href: '#problema', label: 'El problema' },
   { href: '#como-funciona', label: 'Cómo funciona' },
@@ -30,12 +32,12 @@ export default function SiteHeader() {
           ))}
         </nav>
 
-        <a
-          href="#demo"
+        <Link
+          to="/auditoria?demo=1"
           className="bg-[var(--azul)] px-4 py-2 text-[13.5px] font-semibold text-white transition-colors hover:bg-[var(--azul-deep)]"
         >
           Probar la demo
-        </a>
+        </Link>
       </div>
     </header>
   )

@@ -1,3 +1,4 @@
+import { FlaskConical } from "lucide-react";
 import type { BatchAuditReport } from "@/lib/audit";
 import { summarizeReport } from "@/lib/auditReportStats";
 import { AuditReportSummary } from "./AuditReportSummary";
@@ -6,10 +7,14 @@ import { FileResultItem } from "./FileResultItem";
 interface AuditReportProps {
   report: BatchAuditReport;
   zipName: string;
+  /** True when this report came from the bundled sample ZIP rather than a real upload —
+   *  drives the "sample data" banner below so nobody mistakes a demo run for their own
+   *  invoices (Phase 4f). */
+  isDemo?: boolean;
   onReset: () => void;
 }
 
-export function AuditReport({ report, zipName, onReset }: AuditReportProps) {
+export function AuditReport({ report, zipName, isDemo = false, onReset }: AuditReportProps) {
   const stats = summarizeReport(report);
 
   return (
@@ -26,6 +31,24 @@ export function AuditReport({ report, zipName, onReset }: AuditReportProps) {
           Auditar otro lote
         </button>
       </div>
+
+      {isDemo ? (
+        <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border border-[var(--azul)]/40 bg-[var(--azul)]/5 px-4 py-3 sm:px-5">
+          <div className="flex items-center gap-2.5">
+            <FlaskConical className="size-4 shrink-0 text-[var(--azul)]" strokeWidth={1.5} aria-hidden="true" />
+            <p className="font-mono-data text-[11.5px] font-semibold uppercase tracking-[0.06em] text-[var(--azul)]">
+              Estás viendo datos de muestra — no es tu información real
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onReset}
+            className="font-mono-data shrink-0 text-[11.5px] font-semibold uppercase tracking-[0.06em] text-[var(--azul)] underline underline-offset-2 hover:text-[var(--azul-deep)]"
+          >
+            Sube tu propio ZIP
+          </button>
+        </div>
+      ) : null}
 
       <div className="mt-5">
         <AuditReportSummary stats={stats} zipName={zipName} />
