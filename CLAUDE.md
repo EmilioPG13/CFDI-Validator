@@ -44,6 +44,23 @@ the pipeline is fixed code, agents claim rows from a `status`-column queue, same
   compiling any schema — see `engine/src/xsd.ts`. Not in the main `libxml2-wasm` export, and
   the package has no `exports` map restricting subpath imports, so the `lib/nodejs.mjs` path
   import just works.
+- **The fix above is Node-only — the browser path (`engine/src/xsdBrowser.ts`, Phase 4b)
+  uses a different, environment-agnostic mechanism**: `libxml2-wasm`'s *main* entrypoint
+  (not the `nodejs.mjs` subpath) exports a generic `xmlRegisterInputProvider()` plus a
+  ready-made `XmlBufferInputProvider` (in `libxml2-wasm/lib/utils.mjs`) that serves
+  `xsd:import`/`xsd:include` from an in-memory `Record<string, Uint8Array>` — no real
+  disk/network access needed at all. The gotcha: `XmlBufferInputProvider.match()` does an
+  **exact string lookup**, and libxml2's own C-level URI-resolution runs *before* the
+  provider is consulted, so a relative `schemaLocation` gets resolved via standard
+  relative-URL rules against whatever base `url` the importing doc was loaded with —
+  meaning the buffer map's keys must be pre-computed to match exactly what that resolution
+  will produce. Confirmed working (a synthetic `file:///cfd/...` base, mirroring
+  `corpus/xsd/`'s own relative layout, resolves correctly) via a real spike before writing
+  `xsdBrowser.ts` — not assumed from the type defs alone. Still unverified as of Phase 4b:
+  a real Vite/browser bundle actually loading and running this (proven in Node only so
+  far) — libxml2-wasm's compiled WASM glue (`libxml2raw.mjs`) is a dual-target Emscripten
+  build with both Node and browser code paths, which is a strong signal but not a
+  substitute for actually running it in a bundler.
 - `cfdv40.xsd` alone can never validate a real CFDI: its `Complemento` node is an `xs:any`
   wildcard, and the XSD spec's default `processContents="strict"` means the validator must
   already have the complement's own schema loaded to accept it at all. `cfdv40.xsd` doesn't
