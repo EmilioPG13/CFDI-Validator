@@ -11,10 +11,32 @@
       "path": "./tsconfig.api.json"
     }
   ],
+  // "files": [] means tsc -b never actually compiles anything against these
+  // compilerOptions directly -- it only orchestrates the three referenced projects
+  // above, each of which independently declares its own full settings (including
+  // their own allowImportingTsExtensions/moduleResolution/noEmit -- see
+  // tsconfig.api.json, tsconfig.app.json, tsconfig.node.json). This root file's own
+  // compilerOptions are otherwise inert for tsc -b, but Vercel's Edge Function
+  // builder discovers config by walking up from api/consulta-sat.ts for a file
+  // literally named tsconfig.json -- it does NOT know about tsconfig.api.json by
+  // name, so it reads this file standalone. Without allowImportingTsExtensions here,
+  // that pass fails with TS5097 on every explicit .ts-extension import this project
+  // deliberately uses everywhere (see CLAUDE.md's node --experimental-strip-types
+  // convention), and Vercel then refuses to inline the unresolved sat-client import,
+  // failing the whole Edge Function deploy with "referencing unsupported modules" --
+  // hit for real on the first deploy attempt, Phase 4g follow-up. Mirrors
+  // tsconfig.api.json's settings since that's the ground truth for what api/ needs.
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"]
-    }
+    },
+    "target": "ES2023",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": true,
+    "moduleDetection": "force",
+    "noEmit": true
   }
 }
