@@ -3,5 +3,5 @@
   "installCommand": "npm install --include=dev --prefix ../engine && npm install --include=dev --prefix ../sat-client && npm install --include=dev",
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
-  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+  "rewrites": [{ "source": "/((?!api/).*)", "destination": "/index.html" }]
 }

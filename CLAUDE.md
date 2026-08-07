@@ -151,49 +151,63 @@ the pipeline is fixed code, agents claim rows from a `status`-column queue, same
   but if a future Node upgrade ever breaks that package for real, this is the first place
   to look. SPA routing needs a catch-all rewrite (`vercel.json`'s `rewrites`) because
   `main.tsx` uses React Router's `BrowserRouter`, not a hash router — without it, a direct
-  load or refresh of `/auditoria` 404s instead of serving `index.html`. Everything above
-  this point was right the first time (confirmed by the first real deploy actually reaching
-  and completing the main `npm run build` — corpus/engine/sat-client all present, Node
-  24.x active, `tsc -b` and `vite build` both succeeded). **What local simulation could
-  NOT catch, and took three real deploys to fully resolve: `api/` itself.** Vercel's
-  zero-config API function builders do not do a real esbuild-style dependency walk for a
-  relative import living outside the function's own directory
-  (`api/consulta-sat.ts` → `../../sat-client/src/consultaCfdi.ts`) — two different failure
-  modes, confirmed live, not assumed:
-  - **Edge runtime** (the original choice, matching `frontend/api/consulta-sat.ts`'s own
-    header comment about CORS): fails at *deploy* time —
-    `NOW_SANDBOX_WORKER_EDGE_FUNCTION_UNSUPPORTED_MODULES`, "referencing unsupported
-    modules: .../consulta-sat.js: ../../sat-client/src/consultaCfdi.ts" — even with
-    `sourceFilesOutsideRootDirectory` on and the file physically present at build time.
-  - **Node.js runtime** (tried next, same file, same import, only `config.runtime` changed):
-    deploys *successfully*, then crashes on the very first real invocation —
-    `Error [ERR_MODULE_NOT_FOUND]: Cannot find module
-    '/var/task/sat-client/src/consultaCfdi.ts'`. Vercel transpiles only the entrypoint `.ts`
-    to `.js`; it does not bundle the transitive `.ts` import at all.
-  - **Fix, Phase 4g**: pre-bundle it ourselves so neither builder has anything left to fail
-    on. The hand-authored, tested source moved to `frontend/api-src/` (`tsconfig.api.json`'s
-    `include` and the `test` script's glob both point there now); `frontend/api/` is now
-    100% generated — `scripts/bundle-api.mjs` runs `esbuild` with `bundle: true` over
-    `api-src/*.ts` on `predev`/`prebuild`, before Vercel's own build/function-detection ever
-    runs, producing a fully self-contained `api/*.js` with every local import inlined
-    (`sat-client` has zero external dependencies, so there's nothing left to resolve).
-    Verified by importing the bundled output directly in a plain Node process and invoking
-    its default export with real `Request` objects — not just "it built without error."
-  - Runtime stayed `nodejs` (not reverted to `edge`) even after the fix removed the
-    import that broke Edge specifically — no reason to go back once the actual blocker
-    was gone, and `nodejs` is the better-documented, more widely-used path for this
-    platform.
+  load or refresh of `/auditoria` 404s instead of serving `index.html`.
 
-  **First real deploy succeeded end-to-end on the third attempt** (`state: "READY"`,
-  `lambdaRuntimeStats: {"nodejs":2}`), verified live: `GET /` and `GET /auditoria` both
-  200 (confirming the SPA rewrite works), and the bundled `/api/consulta-sat` function
-  responds correctly to a real OPTIONS preflight and a validation-error POST. The lesson
-  that generalizes: **local simulation can prove an import resolves and a build compiles,
-  but it cannot prove how a specific cloud platform's zero-config function bundler treats
-  that import** — that only gets proven by an actual deploy, and it's worth checking the
-  build *and* runtime logs (`get_deployment_build_logs` / `get_runtime_logs` via the Vercel
-  MCP), not just whether `state` reads `READY`, since the Edge failure was a build-time
-  error but the Node.js failure only surfaced on invocation.
+  **Everything above this paragraph was right on the first real deploy** — confirmed by
+  that deploy actually reaching and completing the main `npm run build`
+  (corpus/engine/sat-client all present, Node 24.x active, `tsc -b` and `vite build` both
+  succeeded). It took **four** real deploys, not one, to get `/api/consulta-sat` itself
+  fully working — local simulation could not have caught either failure mode, and the
+  full incident is worth reading end to end because the lesson generalizes:
+
+  1. **Edge runtime** (the original choice, matching `api-src/consulta-sat.ts`'s own header
+     comment about CORS): fails at *deploy* time —
+     `NOW_SANDBOX_WORKER_EDGE_FUNCTION_UNSUPPORTED_MODULES`, "referencing unsupported
+     modules: .../consulta-sat.js: ../../sat-client/src/consultaCfdi.ts" — even with
+     `sourceFilesOutsideRootDirectory` on and the file physically present at build time.
+     Edge Functions are bundled by a stricter, Cloudflare-Workers-style bundler that won't
+     inline a relative import living outside the function's own directory tree.
+  2. **Node.js runtime** (tried next, same file, same import, only `config.runtime`
+     changed): deploys *successfully*, then crashes on the very first real invocation —
+     `Error [ERR_MODULE_NOT_FOUND]: Cannot find module
+     '/var/task/sat-client/src/consultaCfdi.ts'`. Vercel transpiles only the entrypoint
+     `.ts` to `.js`; it never bundles a transitive `.ts` import outside the function's own
+     directory either — a different failure mode, same root cause as #1: **neither of
+     Vercel's zero-config API function builders does a real esbuild-style dependency walk
+     for this monorepo shape.**
+  3. **Fix for #1/#2**: pre-bundle it ourselves so neither builder has anything left to
+     fail on. The hand-authored, tested source moved to `frontend/api-src/`
+     (`tsconfig.api.json`'s `include` and the `test` script's glob both point there now);
+     `frontend/api/` is now 100% generated — `scripts/bundle-api.mjs` runs `esbuild` with
+     `bundle: true` over `api-src/*.ts` on `predev`/`prebuild`, before Vercel's own
+     build/function-detection ever runs, producing a fully self-contained `api/*.js` with
+     every local import inlined (`sat-client` has zero external dependencies, so there's
+     nothing left to resolve). Verified by importing the bundled output directly in a
+     plain Node process and invoking its default export with real `Request` objects — not
+     just "it built without error." Runtime stayed `nodejs` (not reverted to `edge`) —
+     no reason to go back once the actual blocker was gone.
+  4. **This deploy (#3 overall) reached `state: "READY"`** (`lambdaRuntimeStats:
+     {"nodejs":2}`) and looked done — `GET /` and `GET /auditoria` both returned 200. But
+     hitting `/api/consulta-sat` for real (`OPTIONS`, then `POST`) told a different story:
+     every response carried `Content-Disposition: inline; filename="index.html"`, a `GET`
+     returned the actual landing-page HTML, and none of `handleConsultaSatRequest`'s own
+     CORS headers were present. **The deployed function was never being reached at all** —
+     the SPA catch-all rewrite's bare `"source": "/(.*)"` was swallowing `/api/consulta-sat`
+     too, because this project has no framework preset (`"framework": null` in the project
+     metadata means no zero-config adapter automatically prioritizes functions over
+     rewrites the way Next.js's would). Fixed with the standard documented
+     negative-lookahead pattern: `"source": "/((?!api/).*)"`.
+
+  **The lesson that generalizes, twice over**: local simulation can prove an import
+  resolves and a build compiles, but it cannot prove how a specific cloud platform's
+  zero-config function bundler treats that import, or how its routing layer prioritizes a
+  catch-all rewrite against a function — both only get proven by an actual deploy AND an
+  actual request against the live URL. Checking that `state` reads `READY` (or that a
+  status code looks plausible) is not enough — issue #4 returned CORS-preflight-shaped
+  204s and validation-error-shaped 405s by coincidence (Vercel's own automatic static-file
+  OPTIONS handling), which would have read as "working" from status codes alone. Only
+  inspecting the actual response headers/body (or the build/runtime logs via
+  `get_deployment_build_logs` / `get_runtime_logs` on the Vercel MCP) caught it.
 
 ## Dev-time subagents
 
