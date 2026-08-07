@@ -5,7 +5,8 @@
   "type": "module",
   "description": "Deterministic core: parse, XSD-validate and rule-check CFDI 4.0 XML. Pure functions, no I/O beyond local files/catalog lookups — must stay portable to WASM-in-browser (Phase 4).",
   "scripts": {
-    "postinstall": "node scripts/ensure-catalogs-db.mjs",
+    "postinstall": "node scripts/ensure-catalogs-db.mjs && node scripts/build-catalog-bundle.mjs",
+    "build:catalog-bundle": "node scripts/build-catalog-bundle.mjs",
     "typecheck": "tsc --noEmit",
     "test": "node --test --experimental-strip-types test/**/*.test.ts"
   },

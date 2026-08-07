@@ -1,7 +1,7 @@
 import type { Finding } from "../finding.ts";
 import type { ParsedCfdi, ParsedCfdiConceptoRetencion, ParsedCfdiTraslado } from "../parse.ts";
 import { fechaAsDateOnly } from "../parse.ts";
-import type { CatalogRow, SatCatalogs } from "../catalogs.ts";
+import type { CatalogRow, CatalogSource } from "../catalogs.ts";
 import { decimalEquals, sumDecimal } from "../decimal.ts";
 
 // Verbatim from engine/rules/registry.json, ruleId "impuestos-concepto-rollup-consistencia"
@@ -21,7 +21,7 @@ interface MonedaRow extends CatalogRow {
 /** cfdi_40_monedas.decimales for Comprobante/@Moneda as of Comprobante/@Fecha, falling
  *  back to 2 if the moneda doesn't resolve to a vigente catalog row — same fallback
  *  convention as the other arithmetic rules in this registry. */
-function resolveDecimales(parsed: ParsedCfdi, catalogs: SatCatalogs, asOfDate: string): number {
+function resolveDecimales(parsed: ParsedCfdi, catalogs: CatalogSource, asOfDate: string): number {
   const row = catalogs.findVigente<MonedaRow>("cfdi_40_monedas", parsed.Moneda, asOfDate);
   return row?.decimales ?? 2;
 }
@@ -60,7 +60,7 @@ function allConceptoRetenciones(parsed: ParsedCfdi): ParsedCfdiConceptoRetencion
  */
 export function impuestosConceptoRollupConsistencia(
   parsed: ParsedCfdi,
-  catalogs: SatCatalogs,
+  catalogs: CatalogSource,
 ): Finding[] {
   const asOfDate = fechaAsDateOnly(parsed);
   const decimales = resolveDecimales(parsed, catalogs, asOfDate);

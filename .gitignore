@@ -12,6 +12,12 @@ build/
 # living in git history uncompressed anyway.
 corpus/catalogs/catalogs.db
 
+# engine/catalog-bundle/ regenerates from catalogs.db via postinstall (build-catalog-
+# bundle.mjs) -- same reasoning as catalogs.db itself: cheap to regenerate, and a
+# committed-but-derived JSON bundle would silently drift from catalogs.db the first time
+# someone refreshes it and doesn't remember this script exists.
+engine/catalog-bundle/
+
 # Env / secrets
 .env
 .env.local

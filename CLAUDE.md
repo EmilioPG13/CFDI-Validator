@@ -72,6 +72,20 @@ the pipeline is fixed code, agents claim rows from a `status`-column queue, same
   fetched from public mirrors/SAT directly, and is documented with fetch dates in
   `corpus/README.md` — treat that file as the changelog for this data, keep it updated on
   every re-fetch.
+- **Rules are typed against `CatalogSource` (`engine/src/catalogs.ts`), never the concrete
+  `SatCatalogs`** — `SatCatalogs` (node:sqlite-backed, CLI/tests) and `BrowserCatalogs`
+  (`engine/src/catalogsBrowser.ts`, JSON-bundle-backed, Phase 4) both implement it, and no
+  rule has ever needed anything but `.findVigente()`. **`engine/catalog-bundle/*.json`
+  (gitignored, regenerated on `npm install` via `engine/scripts/build-catalog-bundle.mjs`)
+  is a precomputed, hand-trimmed subset of catalogs.db — not a WASM SQL engine.** Decided
+  2026-08-06 after measuring the real access pattern: every rule's only query shape is a
+  point lookup by id with a vigencia date-range filter against 5 known tables, never an
+  arbitrary SQL query — a `Map` answers that, a shipped SQL parser/planner is the wrong
+  tool. Trimmed to only the columns rules actually read: ~9.5 MB raw / ~0.4 MB gzip for all
+  5 tables (vs. ~49 MB for the same tables untrimmed). `engine/test/catalogsBrowser.test.ts`
+  proves both backends produce byte-identical `Finding[]` for every rule × fixture — treat
+  a failure there as the bundle (or the trimmed-column list) having drifted from what a rule
+  actually needs, not as a flaky test.
 
 ## Dev-time subagents
 

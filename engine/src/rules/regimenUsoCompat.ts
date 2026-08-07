@@ -1,7 +1,7 @@
 import type { Finding } from "../finding.ts";
 import type { ParsedCfdi } from "../parse.ts";
 import { fechaAsDateOnly } from "../parse.ts";
-import type { CatalogRow, SatCatalogs } from "../catalogs.ts";
+import type { CatalogRow, CatalogSource } from "../catalogs.ts";
 
 // Verbatim from engine/rules/registry.json, ruleId "regimen-uso-compat" — do not
 // paraphrase; if this ever looks wrong, flag it back to cfdi-domain rather than
@@ -27,7 +27,7 @@ interface UsoCfdiRow extends CatalogRow {
  * UsoCFDI is a different rule's concern (and is already constrained by the CFDI 4.0 XSD's
  * catCFDI:c_UsoCFDI enumeration).
  */
-export function regimenUsoCompat(parsed: ParsedCfdi, catalogs: SatCatalogs): Finding[] {
+export function regimenUsoCompat(parsed: ParsedCfdi, catalogs: CatalogSource): Finding[] {
   const asOfDate = fechaAsDateOnly(parsed);
   const usoCfdi = parsed.Receptor.UsoCFDI;
   const regimenReceptor = parsed.Receptor.RegimenFiscalReceptor;

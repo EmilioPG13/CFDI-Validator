@@ -1,6 +1,6 @@
 import type { Finding } from "../finding.ts";
 import type { ParsedCfdi } from "../parse.ts";
-import type { SatCatalogs } from "../catalogs.ts";
+import type { CatalogSource } from "../catalogs.ts";
 import type { ConsultaCfdiResult } from "../../../sat-client/src/consultaCfdi.ts";
 import type { EfosIndex } from "../../../sat-client/src/efosIndex.ts";
 import { regimenUsoCompat } from "./regimenUsoCompat.ts";
@@ -17,8 +17,12 @@ import { tipodecomprobanteCamposProhibidos } from "./tipodecomprobanteCamposProh
 import { impuestosConceptoRollupConsistencia } from "./impuestosConceptoRollupConsistencia.ts";
 import { impuestosTrasladosRetencionesUnicidad } from "./impuestosTrasladosRetencionesUnicidad.ts";
 
-/** The shape every rule in engine/rules/registry.json implements — see engine/src/finding.ts. */
-export type Rule = (parsed: ParsedCfdi, catalogs: SatCatalogs) => Finding[];
+/** The shape every rule in engine/rules/registry.json implements — see engine/src/finding.ts.
+ *  Typed against `CatalogSource`, not the concrete `SatCatalogs` (Phase 4): a rule that only
+ *  ever calls `.findVigente()` shouldn't care whether it's backed by node:sqlite (CLI/tests)
+ *  or a browser-side JSON bundle (`BrowserCatalogs`, catalogsBrowser.ts) — both implement the
+ *  same interface, so every existing rule function works against either with zero changes. */
+export type Rule = (parsed: ParsedCfdi, catalogs: CatalogSource) => Finding[];
 
 /** All implemented rules, run in no particular order — each is independent per CLAUDE.md's
  *  "one rule, one function". Add new rules here as they're implemented. */

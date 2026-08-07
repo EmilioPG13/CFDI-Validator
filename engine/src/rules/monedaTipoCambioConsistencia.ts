@@ -1,6 +1,6 @@
 import type { Finding } from "../finding.ts";
 import type { ParsedCfdi } from "../parse.ts";
-import type { SatCatalogs } from "../catalogs.ts";
+import type { CatalogSource } from "../catalogs.ts";
 
 // Verbatim from engine/rules/registry.json, ruleId "moneda-tipocambio-consistencia" —
 // do not paraphrase; if this ever looks wrong, flag it back to cfdi-domain rather than
@@ -35,7 +35,7 @@ const SAT_REFERENCE =
  * porcentaje_variacion band around the Banxico/DOF FIX rate — that requires a live
  * exchange-rate source this project doesn't have (see registry.json notes #1).
  */
-export function monedaTipoCambioConsistencia(parsed: ParsedCfdi, _catalogs: SatCatalogs): Finding[] {
+export function monedaTipoCambioConsistencia(parsed: ParsedCfdi, _catalogs: CatalogSource): Finding[] {
   const moneda = parsed.Moneda;
   const tipoCambio = parsed.TipoCambio;
 

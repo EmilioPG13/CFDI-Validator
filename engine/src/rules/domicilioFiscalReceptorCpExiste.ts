@@ -1,7 +1,7 @@
 import type { Finding } from "../finding.ts";
 import type { ParsedCfdi } from "../parse.ts";
 import { fechaAsDateOnly } from "../parse.ts";
-import type { SatCatalogs } from "../catalogs.ts";
+import type { CatalogSource } from "../catalogs.ts";
 
 // Verbatim from engine/rules/registry.json, ruleId "domicilio-fiscal-receptor-cp-existe" —
 // do not paraphrase; if this ever looks wrong, flag it back to cfdi-domain rather than
@@ -27,7 +27,7 @@ const SAT_REFERENCE =
  */
 export function domicilioFiscalReceptorCpExiste(
   parsed: ParsedCfdi,
-  catalogs: SatCatalogs,
+  catalogs: CatalogSource,
 ): Finding[] {
   const asOfDate = fechaAsDateOnly(parsed);
   const cp = parsed.Receptor.DomicilioFiscalReceptor;

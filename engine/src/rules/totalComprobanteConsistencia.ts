@@ -1,7 +1,7 @@
 import type { Finding } from "../finding.ts";
 import type { ParsedCfdi } from "../parse.ts";
 import { fechaAsDateOnly } from "../parse.ts";
-import type { CatalogRow, SatCatalogs } from "../catalogs.ts";
+import type { CatalogRow, CatalogSource } from "../catalogs.ts";
 import { decimalEquals } from "../decimal.ts";
 
 // Verbatim from engine/rules/registry.json, ruleId "total-comprobante-consistencia" —
@@ -21,7 +21,7 @@ interface MonedaRow extends CatalogRow {
 /** cfdi_40_monedas.decimales for Comprobante/@Moneda as of Comprobante/@Fecha, falling
  *  back to 2 if the moneda doesn't resolve to a vigente catalog row — same fallback
  *  convention as subtotal-descuento-conceptos-suma. */
-function resolveDecimales(parsed: ParsedCfdi, catalogs: SatCatalogs, asOfDate: string): number {
+function resolveDecimales(parsed: ParsedCfdi, catalogs: CatalogSource, asOfDate: string): number {
   const row = catalogs.findVigente<MonedaRow>("cfdi_40_monedas", parsed.Moneda, asOfDate);
   return row?.decimales ?? 2;
 }
@@ -44,7 +44,7 @@ function resolveDecimales(parsed: ParsedCfdi, catalogs: SatCatalogs, asOfDate: s
  * Independent from subtotal-descuento-conceptos-suma and impuestos-totales-consistencia
  * (registry.json notes #1): a document can pass one and fail the other.
  */
-export function totalComprobanteConsistencia(parsed: ParsedCfdi, catalogs: SatCatalogs): Finding[] {
+export function totalComprobanteConsistencia(parsed: ParsedCfdi, catalogs: CatalogSource): Finding[] {
   const asOfDate = fechaAsDateOnly(parsed);
   const decimales = resolveDecimales(parsed, catalogs, asOfDate);
 

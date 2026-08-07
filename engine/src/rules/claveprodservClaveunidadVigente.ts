@@ -1,7 +1,7 @@
 import type { Finding } from "../finding.ts";
 import type { ParsedCfdi } from "../parse.ts";
 import { fechaAsDateOnly } from "../parse.ts";
-import type { SatCatalogs } from "../catalogs.ts";
+import type { CatalogSource } from "../catalogs.ts";
 
 // Verbatim from engine/rules/registry.json, ruleId "claveprodserv-claveunidad-vigente" —
 // do not paraphrase; if this ever looks wrong, flag it back to cfdi-domain rather than
@@ -35,7 +35,7 @@ const FIELD_PATH_CLAVE_UNIDAD = "Comprobante/Conceptos/Concepto/@ClaveUnidad";
  * catalogs.db drift. Severity is "warning", not "error", because no CFDI40xxx rejection
  * code was found specific to this temporal check (registry.json notes #1).
  */
-export function claveprodservClaveunidadVigente(parsed: ParsedCfdi, catalogs: SatCatalogs): Finding[] {
+export function claveprodservClaveunidadVigente(parsed: ParsedCfdi, catalogs: CatalogSource): Finding[] {
   const asOfDate = fechaAsDateOnly(parsed);
   const findings: Finding[] = [];
 
