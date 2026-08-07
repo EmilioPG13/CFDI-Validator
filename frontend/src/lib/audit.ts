@@ -1,3 +1,4 @@
+import { unzipSync } from "fflate";
 import {
   registerXsdTreeBuffers,
   loadCfdiValidatorWithComplementsBrowser,
@@ -105,4 +106,62 @@ export function initAuditDeps(): Promise<PipelineDeps> {
 export async function auditOne(xmlBytes: Uint8Array): Promise<CfdiAuditResult> {
   const deps = await initAuditDeps();
   return auditCfdiXml(xmlBytes, deps);
+}
+
+export interface FileAuditEntry {
+  fileName: string;
+  result: CfdiAuditResult;
+}
+
+export interface BatchAuditReport {
+  files: FileAuditEntry[];
+  /** Entries in the ZIP that weren't a `.xml` file (case-insensitive) — surfaced, never
+   *  silently dropped, so a user who zipped the wrong folder (PDFs, a nested ZIP, a
+   *  `.xml.bak`) sees why their file count doesn't match what they expected. Directory
+   *  entries (fflate keys ending in "/") are excluded from both this and `files` — not
+   *  a "skipped file", just zip structure. */
+  skipped: string[];
+}
+
+/**
+ * Unzips bytes and audits every `.xml` entry against already-resolved deps — the actual
+ * unzip-and-loop logic, exported separately from `auditZip` below (which resolves real
+ * browser deps via `initAuditDeps`) specifically so this part is unit-testable with
+ * injected/fake deps, without needing a real `fetch()` context — same DI split already
+ * used for `handleConsultaSatRequest`/`handler` in `api/consulta-sat.ts`.
+ *
+ * Deliberately synchronous unzip (`fflate`'s `unzipSync`, not the streaming API) — the
+ * plan's own target is "a ZIP of 100 synthetic XMLs" (Phase 2's own success criterion),
+ * not gigabyte archives; revisit if real usage proves that assumption wrong.
+ */
+export async function auditZipEntries(
+  zipBytes: Uint8Array,
+  deps: PipelineDeps,
+  onProgress?: (done: number, total: number) => void,
+): Promise<BatchAuditReport> {
+  const entries = unzipSync(zipBytes);
+  const paths = Object.keys(entries).filter((p) => !p.endsWith("/"));
+  const xmlPaths = paths.filter((p) => p.toLowerCase().endsWith(".xml"));
+  const skipped = paths.filter((p) => !p.toLowerCase().endsWith(".xml"));
+
+  const files: FileAuditEntry[] = [];
+  for (let i = 0; i < xmlPaths.length; i++) {
+    const fileName = xmlPaths[i];
+    const result = await auditCfdiXml(entries[fileName], deps);
+    files.push({ fileName, result });
+    onProgress?.(i + 1, xmlPaths.length);
+  }
+
+  return { files, skipped };
+}
+
+/** The actual "drop a ZIP, get a report" entry point the UI calls — resolves real
+ *  browser deps (fetching static assets on first call, see `initAuditDeps`) and hands
+ *  off to `auditZipEntries`. */
+export async function auditZip(
+  zipBytes: Uint8Array,
+  onProgress?: (done: number, total: number) => void,
+): Promise<BatchAuditReport> {
+  const deps = await initAuditDeps();
+  return auditZipEntries(zipBytes, deps, onProgress);
 }

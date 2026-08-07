@@ -22,5 +22,8 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true
   },
-  "include": ["vite.config.ts"]
+  // vite.config.ts and src/**/*.test.ts share this config because both run in a plain
+  // Node context (never bundled for the browser) and both need node: types -- see
+  // tsconfig.app.json's exclude for why *.test.ts is carved out of the browser config.
+  "include": ["vite.config.ts", "src/**/*.test.ts"]
 }

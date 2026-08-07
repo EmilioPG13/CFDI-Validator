@@ -30,5 +30,11 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true
   },
-  "include": ["src"]
+  "include": ["src"],
+  // *.test.ts files under src/ (e.g. src/lib/audit.test.ts) run standalone via
+  // `node --experimental-strip-types`, never through Vite/the browser bundle -- they
+  // need node: types (see tsconfig.node.json, which picks them up instead), not DOM-only
+  // browser types. Same "don't let a node: import typecheck clean somewhere it can't
+  // actually run" principle as tsconfig.api.json's own comment.
+  "exclude": ["src/**/*.test.ts"]
 }
