@@ -62,8 +62,19 @@ export const EXPLAINER_OUTPUT_SCHEMA: JsonSchemaSpec = {
 
 /** Builds the request sent to the LlmProvider. `model` is the caller's responsibility
  *  (resolved from AppSetting "model.explainer" via settings/resolver.ts) -- this function
- *  only shapes the messages/schema, deliberately staying provider-selection-agnostic. */
-export function buildExplainerRequest(finding: Finding, model: string): ChatCompletionRequest {
+ *  only shapes the messages/schema, deliberately staying provider-selection-agnostic.
+ *
+ *  `systemPrompt` defaults to the in-code fallback but stays a plain string param rather
+ *  than this function reaching into the DB itself -- jobs/processor.ts resolves the active
+ *  PromptVersion (prompts/store.ts's resolveActivePromptBody, Sub-phase 5e) and passes the
+ *  result in. Keeps this function synchronous and DB-free on purpose, so
+ *  explainerPrompt.test.ts can keep asserting against EXPLAINER_SYSTEM_PROMPT directly
+ *  with zero DB dependency. */
+export function buildExplainerRequest(
+  finding: Finding,
+  model: string,
+  systemPrompt: string = EXPLAINER_SYSTEM_PROMPT,
+): ChatCompletionRequest {
   const userContent = [
     `ruleId: ${finding.ruleId}`,
     `severity: ${finding.severity}`,
@@ -74,7 +85,7 @@ export function buildExplainerRequest(finding: Finding, model: string): ChatComp
   return {
     model,
     messages: [
-      { role: "system", content: EXPLAINER_SYSTEM_PROMPT },
+      { role: "system", content: systemPrompt },
       { role: "user", content: `Explica este hallazgo:\n\n${userContent}` },
     ],
     jsonSchema: EXPLAINER_OUTPUT_SCHEMA,

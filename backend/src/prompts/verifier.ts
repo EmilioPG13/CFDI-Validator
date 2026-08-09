@@ -86,7 +86,17 @@ export const VERIFIER_OUTPUT_SCHEMA: JsonSchemaSpec = {
   },
 };
 
-export function buildVerifierRequest(finding: Finding, output: ExplainerOutput, model: string): ChatCompletionRequest {
+// `systemPrompt` defaults to the in-code fallback -- same reasoning as
+// explainer.ts's buildExplainerRequest: stays a plain string param (synchronous, DB-free)
+// so verifier.test.ts keeps asserting against VERIFIER_SYSTEM_PROMPT directly; the DB
+// resolution (prompts/store.ts's resolveActivePromptBody, Sub-phase 5e) happens in
+// jobs/processor.ts, not here.
+export function buildVerifierRequest(
+  finding: Finding,
+  output: ExplainerOutput,
+  model: string,
+  systemPrompt: string = VERIFIER_SYSTEM_PROMPT,
+): ChatCompletionRequest {
   const userContent = [
     `satReference: ${finding.satReference}`,
     `explicacion generada: ${output.explicacion}`,
@@ -96,7 +106,7 @@ export function buildVerifierRequest(finding: Finding, output: ExplainerOutput, 
   return {
     model,
     messages: [
-      { role: "system", content: VERIFIER_SYSTEM_PROMPT },
+      { role: "system", content: systemPrompt },
       { role: "user", content: userContent },
     ],
     jsonSchema: VERIFIER_OUTPUT_SCHEMA,
@@ -111,8 +121,9 @@ export async function verifyLayer2(
   finding: Finding,
   output: ExplainerOutput,
   model: string,
+  systemPrompt: string = VERIFIER_SYSTEM_PROMPT,
 ): Promise<VerifierResult> {
-  const result = await provider.chatCompletion(buildVerifierRequest(finding, output, model));
+  const result = await provider.chatCompletion(buildVerifierRequest(finding, output, model, systemPrompt));
   const data = result.data as Layer2Output | null;
   if (!data) {
     return { passed: false, layer: 2, reason: "Verifier no devolvió JSON válido." };

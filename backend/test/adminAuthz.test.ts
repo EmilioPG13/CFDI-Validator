@@ -36,6 +36,11 @@ const ADMIN_ROUTES: { method: "GET" | "POST" | "PUT" | "DELETE"; path: string }[
   { method: "GET", path: "/admin/settings/model.explainer" },
   { method: "PUT", path: "/admin/settings/model.explainer" },
   { method: "DELETE", path: "/admin/settings/model.explainer" },
+  { method: "GET", path: "/admin/prompts" },
+  { method: "GET", path: "/admin/prompts/explainer.system" },
+  { method: "POST", path: "/admin/prompts/explainer.system" },
+  { method: "POST", path: "/admin/prompts/nonexistent-id/activate" },
+  { method: "DELETE", path: "/admin/prompts/nonexistent-id" },
 ];
 
 function cookieHeader(token: string): string {

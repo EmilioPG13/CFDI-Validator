@@ -5,8 +5,9 @@
 import { prisma } from "../prismaClient.ts";
 import { provider } from "../llm/rateLimitedProvider.ts";
 import { resolveSetting } from "../settings/resolver.ts";
-import { buildExplainerRequest, type ExplainerOutput } from "../prompts/explainer.ts";
-import { verifyLayer1, verifyLayer2 } from "../prompts/verifier.ts";
+import { resolveActivePromptBody } from "../prompts/store.ts";
+import { buildExplainerRequest, EXPLAINER_SYSTEM_PROMPT, type ExplainerOutput } from "../prompts/explainer.ts";
+import { verifyLayer1, verifyLayer2, VERIFIER_SYSTEM_PROMPT } from "../prompts/verifier.ts";
 import { markJobDone, markJobRejected, markJobFailed, type QueuedJob } from "./queue.ts";
 
 // Defaults matter here: even a fresh install with nothing ever written to
@@ -41,9 +42,15 @@ export async function processJob(job: QueuedJob): Promise<void> {
   try {
     const explainerModel = (await resolveSetting("model.explainer", DEFAULT_EXPLAINER_MODEL)).value;
     const verifierModel = (await resolveSetting("model.verifier", DEFAULT_VERIFIER_MODEL)).value;
+    // Sub-phase 5e: an admin-activated PromptVersion (prompts/store.ts) overrides the
+    // in-code fallback here -- prompt-source-agnostic by construction, same reasoning as
+    // Verifier Layer 1 validating a runtime value regardless of which prompt produced it
+    // (see prompts/store.ts's header comment).
+    const explainerPrompt = (await resolveActivePromptBody("explainer.system", EXPLAINER_SYSTEM_PROMPT)).body;
+    const verifierPrompt = (await resolveActivePromptBody("verifier.system", VERIFIER_SYSTEM_PROMPT)).body;
 
     const explainerResult = await provider.chatCompletion(
-      buildExplainerRequest(job.findingPayload, explainerModel),
+      buildExplainerRequest(job.findingPayload, explainerModel, explainerPrompt),
     );
     await logLlmCall(job.id, "EXPLAINER", explainerModel, explainerResult.usage, explainerResult.latencyMs);
 
@@ -60,7 +67,7 @@ export async function processJob(job: QueuedJob): Promise<void> {
     }
 
     const layer2Started = Date.now();
-    const layer2 = await verifyLayer2(provider, job.findingPayload, output, verifierModel);
+    const layer2 = await verifyLayer2(provider, job.findingPayload, output, verifierModel, verifierPrompt);
     // verifyLayer2 doesn't expose raw usage (it returns a VerifierResult, not a
     // ChatCompletionResult) -- log a call with the wall-clock time measured here; the
     // token counts are a known, acceptable gap for this first cut, noted rather than
