@@ -41,6 +41,10 @@ const ADMIN_ROUTES: { method: "GET" | "POST" | "PUT" | "DELETE"; path: string }[
   { method: "POST", path: "/admin/prompts/explainer.system" },
   { method: "POST", path: "/admin/prompts/nonexistent-id/activate" },
   { method: "DELETE", path: "/admin/prompts/nonexistent-id" },
+  { method: "GET", path: "/admin/jobs" },
+  { method: "GET", path: "/admin/jobs/nonexistent-id" },
+  { method: "GET", path: "/admin/llm-calls" },
+  { method: "GET", path: "/admin/llm-calls/totals" },
 ];
 
 function cookieHeader(token: string): string {

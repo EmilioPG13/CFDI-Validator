@@ -113,3 +113,40 @@ export async function markJobFailed(jobId: string, error: string, currentAttempt
 export async function getJobsByBatch(batchId: string) {
   return prisma.job.findMany({ where: { batchId }, orderBy: { createdAt: "asc" } });
 }
+
+// --- Admin list/detail views (Sub-phase 5e) ----------------------------------------------
+// No injectable-repo seam here, deliberately -- same precedent as every function above in
+// this file (createJobsForBatch, claimPendingJobs, etc.): Job/JobEvent data access always
+// goes through the shared `prisma` singleton directly, with jobQueue.test.ts (gated on
+// DATABASE_URL_TEST) as the one place this module gets tested against a real DB rather
+// than a fake. Unlike SettingsRepo/ModelHealthRepo, nothing here needed swapping for a
+// fake in a unit test.
+
+export interface JobListFilter {
+  status?: string;
+  batchId?: string;
+}
+
+export async function listJobs(filter: JobListFilter, limit: number, offset: number) {
+  const where = {
+    ...(filter.status ? { status: filter.status } : {}),
+    ...(filter.batchId ? { batchId: filter.batchId } : {}),
+  };
+  const [jobs, total] = await Promise.all([
+    prisma.job.findMany({ where, orderBy: { createdAt: "desc" }, take: limit, skip: offset }),
+    prisma.job.count({ where }),
+  ]);
+  return { jobs, total };
+}
+
+/** Includes JobEvent history and LlmCall rows -- the admin console's job detail view is
+ *  also the cost-tracking drill-down (how many LLM calls, what tokens, for this job). */
+export async function getJobById(id: string) {
+  return prisma.job.findUnique({
+    where: { id },
+    include: {
+      events: { orderBy: { createdAt: "asc" } },
+      llmCalls: { orderBy: { createdAt: "asc" } },
+    },
+  });
+}
