@@ -23,7 +23,11 @@ app.set("trust proxy", 1);
 // (which doesn't need credentials since it uses a bearer-token-style Clerk session).
 app.use(
   cors({
-    origin: [env.FRONTEND_URL, "http://localhost:5173"],
+    // frontend/vite.config.ts pins the dev server to port 3000 (not Vite's own 5173
+    // default) -- confirmed by reading that file directly, not assumed, after this
+    // mismatch would have silently broken the admin console's cookie-based auth in local
+    // dev (a CORS rejection at the browser level, before SameSite/Secure ever matter).
+    origin: [env.FRONTEND_URL, "http://localhost:3000"],
     credentials: true,
   }),
 );
