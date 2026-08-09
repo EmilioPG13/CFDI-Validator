@@ -19,13 +19,15 @@ corpus/catalogs/catalogs.db
 engine/catalog-bundle/
 
 # frontend/api/*.js(.map) are esbuild output generated from frontend/api-src/*.ts by
-# scripts/bundle-api.mjs (prebuild) -- necessary so Vercel's Node.js Function builder finds
-# a fully self-contained file with no cross-package relative imports for it to fail on (see
-# CLAUDE.md's Vercel deployment gotcha and frontend/api/README.md). api-src/ is the real,
-# hand-authored, tested source; frontend/api/README.md itself is NOT matched by this glob
-# and stays tracked.
-frontend/api/*.js
-frontend/api/*.js.map
+# scripts/bundle-api.mjs -- deliberately COMMITTED, not gitignored, unlike every other
+# generated artifact in this repo. Confirmed live (Phase 4g, deploy #4): Vercel decides
+# which files under api/ are functions by scanning the git checkout BEFORE running any
+# install/build command -- a file that only exists because prebuild generated it mid-build
+# is invisible to that scan, so the deployed route 404s even though the build itself
+# succeeds. Regenerate with `node scripts/bundle-api.mjs` (or just `npm run build`, which
+# already runs it) and re-commit the output whenever api-src/*.ts or its sat-client
+# dependency changes -- same "generated but must be re-committed deliberately" discipline
+# already applied to frontend/public/demo/muestra-cfdi.zip, for a different reason.
 
 # Env / secrets
 .env

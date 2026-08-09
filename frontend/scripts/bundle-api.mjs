@@ -12,11 +12,15 @@
 // fully self-contained (every local import inlined) BEFORE Vercel's own function detection
 // runs -- there is then nothing left for its bundler/tracer to fail on.
 //
-// api/ itself is now 100% generated output (gitignored, see .gitignore) -- api-src/ is the
-// real, hand-authored, tested source. Same "cheap to regenerate, dangerous to let drift if
-// committed" reasoning already applied elsewhere in this repo (engine/catalog-bundle/,
-// frontend/public/xsd/, etc.). Wired into prebuild alongside sync-static-assets.mjs so both
-// run before Vercel's automatic api/ scan, same as they do before `vite build`.
+// api/ itself is 100% generated output -- api-src/ is the real, hand-authored, tested
+// source. UNLIKE every other generated artifact in this repo, api/*.js(.map) IS committed
+// to git, not gitignored -- confirmed live (Phase 4g, deploy #4) that Vercel decides which
+// files under api/ are functions by scanning the git checkout BEFORE running any
+// install/build command, so a file this script only produces mid-build is invisible to
+// that scan and the route 404s even though the build succeeds. Rerun this script and
+// re-commit its output whenever api-src/*.ts or its sat-client dependency changes. Also
+// wired into prebuild (alongside sync-static-assets.mjs) purely so local dev/CI never runs
+// against a stale bundle -- that does NOT relieve the commit step above.
 //
 // sat-client has zero external dependencies and consultaCfdi.ts's only local import is
 // rateLimiter.ts (also zero imports) -- so this bundle has nothing to resolve beyond two

@@ -156,9 +156,9 @@ the pipeline is fixed code, agents claim rows from a `status`-column queue, same
   **Everything above this paragraph was right on the first real deploy** — confirmed by
   that deploy actually reaching and completing the main `npm run build`
   (corpus/engine/sat-client all present, Node 24.x active, `tsc -b` and `vite build` both
-  succeeded). It took **four** real deploys, not one, to get `/api/consulta-sat` itself
-  fully working — local simulation could not have caught either failure mode, and the
-  full incident is worth reading end to end because the lesson generalizes:
+  succeeded). It took **five** real deploys, not one, to get `/api/consulta-sat` itself
+  fully working — local simulation could not have caught any of the four failure modes
+  below, and the full incident is worth reading end to end because the lesson generalizes:
 
   1. **Edge runtime** (the original choice, matching `api-src/consulta-sat.ts`'s own header
      comment about CORS): fails at *deploy* time —
@@ -197,17 +197,40 @@ the pipeline is fixed code, agents claim rows from a `status`-column queue, same
      metadata means no zero-config adapter automatically prioritizes functions over
      rewrites the way Next.js's would). Fixed with the standard documented
      negative-lookahead pattern: `"source": "/((?!api/).*)"`.
+  5. **Deploy #4** (the rewrite fix, `api/*.js` still gitignored per the Phase 4g fix-#3
+     pattern used everywhere else in this repo) reached `state: "READY"` again — but this
+     time `/api/consulta-sat` came back a clean `404 NOT_FOUND` from Vercel itself, not from
+     our code or the SPA rewrite. The build log gave it away: every prior deploy showed a
+     distinct "Installing dependencies... Using TypeScript..." step where Vercel processed
+     `api/`'s function(s); this one didn't have that step at all. **Vercel decides which
+     files under `api/` are functions by scanning the git checkout *before* running any
+     install/build command** — `scripts/bundle-api.mjs` only produces `api/consulta-sat.js`
+     *during* `prebuild`, so at the point Vercel's scan runs, the file doesn't exist yet and
+     zero functions get planned for the deployment. This is NOT how `outputDirectory`
+     (`dist/`) works for the static site — only `api/` function detection has this earlier,
+     pre-build scan. Fixed by committing `frontend/api/*.js`(`.map`) directly instead of
+     gitignoring them — the one generated artifact in this whole repo that must be
+     committed, for a platform-timing reason rather than a content-curation one (contrast
+     with `frontend/public/demo/muestra-cfdi.zip`, committed for curation, not timing).
+     `bundle-api.mjs` stays wired into `predev`/`prebuild` so local dev/CI never runs
+     against a stale bundle, but that no longer relieves the commit step — see
+     `frontend/api/README.md`'s "Why committed, not gitignored" section for the discipline
+     this now requires (regenerate and re-commit whenever `api-src/*.ts` or its `sat-client`
+     dependency changes).
 
-  **The lesson that generalizes, twice over**: local simulation can prove an import
+  **The lesson that generalizes, three times over**: local simulation can prove an import
   resolves and a build compiles, but it cannot prove how a specific cloud platform's
-  zero-config function bundler treats that import, or how its routing layer prioritizes a
-  catch-all rewrite against a function — both only get proven by an actual deploy AND an
-  actual request against the live URL. Checking that `state` reads `READY` (or that a
-  status code looks plausible) is not enough — issue #4 returned CORS-preflight-shaped
-  204s and validation-error-shaped 405s by coincidence (Vercel's own automatic static-file
-  OPTIONS handling), which would have read as "working" from status codes alone. Only
-  inspecting the actual response headers/body (or the build/runtime logs via
-  `get_deployment_build_logs` / `get_runtime_logs` on the Vercel MCP) caught it.
+  zero-config function bundler treats that import, how its routing layer prioritizes a
+  catch-all rewrite against a function, or *when* in the pipeline it decides a function
+  exists at all — all three only get proven by an actual deploy AND an actual request
+  against the live URL. Checking that `state` reads `READY` (or that a status code looks
+  plausible) is not enough — issue #4 returned CORS-preflight-shaped 204s and
+  validation-error-shaped 405s by coincidence (Vercel's own automatic static-file OPTIONS
+  handling), which would have read as "working" from status codes alone, and issue #5's
+  build looked identical in every way that matters *except* the one missing log section.
+  Only inspecting the actual response headers/body, or the build logs in full (not just
+  the tail), via `get_deployment_build_logs` / `get_runtime_logs` on the Vercel MCP caught
+  either one.
 
 ## Dev-time subagents
 
