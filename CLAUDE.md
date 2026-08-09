@@ -254,6 +254,14 @@ the pipeline is fixed code, agents claim rows from a `status`-column queue, same
   logs (`get_deployment_build_logs` / `get_runtime_logs` on the Vercel MCP) caught each of
   these in turn.
 
+  **Deploy #6 is the first one actually confirmed fully working**, live, at
+  `https://cfdi-validator.vercel.app` — not just `state: "READY"`, but a real `OPTIONS`
+  preflight returning `handleConsultaSatRequest`'s own CORS headers, a bad `POST` returning
+  its own exact validation-error JSON, and a well-formed `POST` returning a genuine SAT
+  `ConsultaCFDIService` SOAP response end-to-end (`"N - 602: Comprobante no encontrado"` —
+  correct, since the UUID used was a placeholder, not a real invoice against that RFC; the
+  point proven is that the live round trip through the deployed proxy actually happened).
+
 ## Dev-time subagents
 
 Defined in `.claude/agents/`: `cfdi-domain` (owns the rule catalog), `fixture-gen` (synthetic
