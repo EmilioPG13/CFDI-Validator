@@ -192,12 +192,14 @@ async function handleConsultaSatRequest(request, consultaFn) {
   }
 }
 var client = new ConsultaCfdiClient();
-function handler(request) {
-  return handleConsultaSatRequest(request, (params) => client.consulta(params));
-}
+var consulta_sat_default = {
+  fetch(request) {
+    return handleConsultaSatRequest(request, (params) => client.consulta(params));
+  }
+};
 export {
   config,
-  handler as default,
+  consulta_sat_default as default,
   handleConsultaSatRequest,
   parseConsultaCfdiParams
 };

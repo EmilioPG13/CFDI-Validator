@@ -135,6 +135,16 @@ export async function handleConsultaSatRequest(
 
 const client = new ConsultaCfdiClient();
 
-export default function handler(request: Request): Promise<Response> {
-  return handleConsultaSatRequest(request, (params) => client.consulta(params));
-}
+// A bare `export default function(request) { return response }` is NOT the Web-standard
+// shape Vercel's Node.js runtime expects for a default export -- confirmed live (Phase 4g,
+// deploy #5): it interprets a default-exported function as the legacy Node
+// `(req, res) => void` handler, logs `WARN: default export returned a 'Response'.` when it
+// sees one anyway, and never actually sends a response -- the client just hangs (status 0
+// in Vercel's own runtime logs). The documented Web-standard shape is a default export
+// that's an OBJECT with a `fetch` method (or named `GET`/`POST`/etc. exports), not a bare
+// function -- see https://vercel.com/docs/functions/functions-api-reference.
+export default {
+  fetch(request: Request): Promise<Response> {
+    return handleConsultaSatRequest(request, (params) => client.consulta(params));
+  },
+};

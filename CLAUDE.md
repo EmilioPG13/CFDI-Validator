@@ -156,8 +156,8 @@ the pipeline is fixed code, agents claim rows from a `status`-column queue, same
   **Everything above this paragraph was right on the first real deploy** — confirmed by
   that deploy actually reaching and completing the main `npm run build`
   (corpus/engine/sat-client all present, Node 24.x active, `tsc -b` and `vite build` both
-  succeeded). It took **five** real deploys, not one, to get `/api/consulta-sat` itself
-  fully working — local simulation could not have caught any of the four failure modes
+  succeeded). It took **six** real deploys, not one, to get `/api/consulta-sat` itself
+  fully working — local simulation could not have caught any of the five failure modes
   below, and the full incident is worth reading end to end because the lesson generalizes:
 
   1. **Edge runtime** (the original choice, matching `api-src/consulta-sat.ts`'s own header
@@ -217,20 +217,42 @@ the pipeline is fixed code, agents claim rows from a `status`-column queue, same
      `frontend/api/README.md`'s "Why committed, not gitignored" section for the discipline
      this now requires (regenerate and re-commit whenever `api-src/*.ts` or its `sat-client`
      dependency changes).
+  6. **Deploy #5 finally had a real function registered** (`lambdaRuntimeStats:
+     {"nodejs":1}`) — but every request to `/api/consulta-sat` just hung with no response,
+     including a bare `OPTIONS` preflight that touches zero network code. `GET /` and
+     `GET /auditoria` were both instant; only the function hung. Vercel's own runtime logs
+     (`get_runtime_logs`, not the build logs) had the answer: `WARN: default export
+     returned a 'Response'. The default-export signature is '(req, res) => void' — returns
+     are ignored.` A bare `export default function handler(request: Request):
+     Promise<Response>` — the shape used since Phase 4d, unchanged through all four prior
+     fixes — is NOT the Web-standard shape Vercel's Node.js runtime accepts for a default
+     export; it's interpreted as the legacy Node `(req, res) => void` callback style, so
+     returning a `Response` is silently ignored and no response is ever sent. The
+     documented Web-standard shape needs a default export that's an **object** with a
+     `fetch` method (`export default { fetch(request) { return response } }`), or named
+     `GET`/`POST`/etc. exports — not a bare function, even though a bare function
+     type-checks fine against `Request => Promise<Response>` and works perfectly when
+     invoked directly in a plain Node process (exactly how this was "verified" after fixes
+     #3 and #4). Fixed in `api-src/consulta-sat.ts`.
 
-  **The lesson that generalizes, three times over**: local simulation can prove an import
-  resolves and a build compiles, but it cannot prove how a specific cloud platform's
-  zero-config function bundler treats that import, how its routing layer prioritizes a
-  catch-all rewrite against a function, or *when* in the pipeline it decides a function
-  exists at all — all three only get proven by an actual deploy AND an actual request
-  against the live URL. Checking that `state` reads `READY` (or that a status code looks
-  plausible) is not enough — issue #4 returned CORS-preflight-shaped 204s and
+  **The lesson that generalizes, four times over**: local simulation can prove an import
+  resolves, a build compiles, and a function behaves correctly when invoked directly in a
+  plain Node process — but it cannot prove how a specific cloud platform's zero-config
+  function bundler treats a cross-package import, how its routing layer prioritizes a
+  catch-all rewrite against a function, *when* in the pipeline it decides a function
+  exists at all, or whether its runtime actually recognizes the export shape being handed
+  to it. All four only get proven by an actual deploy AND an actual request against the
+  live URL — direct invocation of the bundled module (issue #6's own "verification" after
+  fixes #3/#4) proved the code's *logic* was correct while missing that Vercel's runtime
+  never calls it that way at all. Checking that `state` reads `READY` (or that a status
+  code looks plausible) is not enough — issue #4 returned CORS-preflight-shaped 204s and
   validation-error-shaped 405s by coincidence (Vercel's own automatic static-file OPTIONS
-  handling), which would have read as "working" from status codes alone, and issue #5's
-  build looked identical in every way that matters *except* the one missing log section.
-  Only inspecting the actual response headers/body, or the build logs in full (not just
-  the tail), via `get_deployment_build_logs` / `get_runtime_logs` on the Vercel MCP caught
-  either one.
+  handling), issue #5's build log looked identical in every way that matters except one
+  missing section, and issue #6 produced no response at all (a hang, not an error) with
+  nothing in the build log to explain it. Only inspecting the actual response
+  headers/body, the full build log, or — the one that finally caught #6 — the *runtime*
+  logs (`get_deployment_build_logs` / `get_runtime_logs` on the Vercel MCP) caught each of
+  these in turn.
 
 ## Dev-time subagents
 
