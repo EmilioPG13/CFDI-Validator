@@ -1,0 +1,41 @@
+{
+  "name": "@cfdi-risk-auditor/backend",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "description": "Phase 5 -- LLM explanation layer (Explainer/Verifier) + admin console. Separate Express service, deployed independently of the Vercel-hosted frontend (see CLAUDE.md's Phase 5 note on why). Not a Vercel function -- a normal long-running Node process (Render free tier).",
+  "engines": {
+    "node": "24.x"
+  },
+  "scripts": {
+    "dev": "node --experimental-strip-types --watch src/server.ts",
+    "build": "tsc -b",
+    "start": "node dist/server.js",
+    "typecheck": "tsc -b",
+    "postinstall": "prisma generate",
+    "prisma:migrate:dev": "prisma migrate dev",
+    "prisma:migrate:deploy": "prisma migrate deploy",
+    "prisma:seed": "node --experimental-strip-types prisma/seed.ts",
+    "test": "node --experimental-strip-types --test test/**/*.test.ts"
+  },
+  "dependencies": {
+    "express": "^5.2.1",
+    "cors": "^2.8.6",
+    "cookie-parser": "^1.4.7",
+    "bcryptjs": "^2.4.3",
+    "jsonwebtoken": "^9.0.2",
+    "@prisma/client": "^6.16.3",
+    "openai": "^6.49.0",
+    "dotenv": "^16.4.5"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "@types/node": "^24.0.0",
+    "@types/express": "^5.0.3",
+    "@types/cors": "^2.8.19",
+    "@types/cookie-parser": "^1.4.9",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/bcryptjs": "^2.4.6",
+    "prisma": "^6.16.3"
+  }
+}

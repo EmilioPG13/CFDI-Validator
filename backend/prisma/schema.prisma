@@ -1,0 +1,148 @@
+// CFDI Risk Auditor -- Phase 5 backend data model. See CLAUDE.md's Phase 5 plan
+// (C:\Users\Emili\.claude\plans\deep-crunching-stearns.md) for the full reasoning behind
+// every design choice referenced in the comments below.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+// Auditor / Catalog Watcher are Phase 6+ -- not added here ahead of need.
+enum LlmRole {
+  EXPLAINER
+  VERIFIER
+}
+
+enum LlmCallPurpose {
+  PRODUCTION
+  HEALTH_CHECK
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  role         Role     @default(USER)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model AppSetting {
+  key       String   @id
+  value     Json
+  updatedBy String?
+  updatedAt DateTime @updatedAt
+  // No row = code default. THE ONLY code permitted to touch this table is
+  // src/settings/repo.ts -- enforced by test/settingsResolverEnforcement.test.ts, which
+  // scans every other file under src/ for the literal string "prisma.appSetting".
+  // Reset (src/settings/resolver.ts's resetSetting()) DELETES the row -- it must never
+  // write the default value back in, which would silently recreate the exact footgun
+  // cv-tailor's own getSettings()/app_settings still has (see CLAUDE.md).
+}
+
+model PromptVersion {
+  id        String   @id @default(cuid())
+  key       String // "explainer.system" | "verifier.system"
+  body      String
+  version   Int
+  active    Boolean  @default(false)
+  createdBy String?
+  createdAt DateTime @default(now())
+
+  @@unique([key, version])
+  @@index([key, active])
+  // A partial unique index enforcing "exactly one active row per key" is added by hand
+  // to the first migration's SQL (Prisma's schema DSL can't express a WHERE-qualified
+  // unique index) -- see backend/prisma/migrations/.../migration.sql and README.md.
+}
+
+model ModelCatalog {
+  id        String   @id @default(cuid())
+  fetchedAt DateTime @default(now())
+  models    Json // raw GET /v1/models response, passthrough -- not normalized further
+}
+
+model ModelHealthCheck {
+  id                 String   @id @default(cuid())
+  modelId            String
+  role               LlmRole
+  checkedAt          DateTime @default(now())
+  reachable          Boolean
+  supportsJsonSchema Boolean
+  latencyMs          Int?
+  spanishOk          Boolean?
+  sample             String?
+  error              String?
+
+  @@unique([modelId, role])
+  // Latest-only per (modelId, role), upserted on every probe -- "last-known health",
+  // not an append-only history. supportsJsonSchema is the field that matters most: a
+  // model that silently replies in prose instead of honoring response_format:json_schema
+  // breaks the Explainer/Verifier pipeline with no error anywhere -- see healthProbe.ts.
+}
+
+model Job {
+  id             String    @id @default(cuid())
+  batchId        String
+  // Free-text status column, no DB-level enum -- deliberately matches job-search-agents'
+  // queue convention (a fast-evolving lifecycle, unlike Role/LlmRole above which are small
+  // and fixed). Valid values: pending | processing | done | rejected | failed.
+  status         String    @default("pending")
+  findingRuleId  String
+  // Already client-redacted Finding (RFCs/UUIDs/names stripped in the BROWSER before this
+  // ever left it -- see prompts/explainer.ts's header comment and CLAUDE.md's Phase 5
+  // privacy note). The backend never receives raw fiscal identifiers for this to leak.
+  findingPayload Json
+  explanation    String?
+  suggestedFix   String?
+  citedRuleIds   Json?
+  verifierNotes  Json?
+  attempts       Int       @default(0)
+  lastError      String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  claimedAt      DateTime?
+
+  events   JobEvent[]
+  llmCalls LlmCall[]
+
+  @@index([status, createdAt])
+  @@index([batchId])
+}
+
+model JobEvent {
+  id         String   @id @default(cuid())
+  jobId      String
+  job        Job      @relation(fields: [jobId], references: [id])
+  fromStatus String?
+  toStatus   String
+  reason     String?
+  createdAt  DateTime @default(now())
+
+  @@index([jobId])
+}
+
+model LlmCall {
+  id               String         @id @default(cuid())
+  jobId            String?
+  job              Job?           @relation(fields: [jobId], references: [id])
+  role             LlmRole
+  purpose          LlmCallPurpose @default(PRODUCTION)
+  modelId          String
+  promptTokens     Int
+  completionTokens Int
+  latencyMs        Int
+  createdAt        DateTime       @default(now())
+
+  @@index([modelId])
+  @@index([createdAt])
+}
