@@ -10,7 +10,7 @@
   "scripts": {
     "dev": "node --experimental-strip-types --watch src/server.ts",
     "build": "tsc -b",
-    "start": "node dist/server.js",
+    "start": "node --experimental-strip-types src/server.ts",
     "typecheck": "tsc -b",
     "postinstall": "prisma generate",
     "prisma:migrate:dev": "prisma migrate dev",

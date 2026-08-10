@@ -1,0 +1,49 @@
+# Render Blueprint for backend/ -- the Phase 5 Express service, deployed independently of
+# the Vercel-hosted frontend (see CLAUDE.md's Phase 5 note on why: separate service, not
+# more Vercel functions). Root Directory is backend/ within this monorepo; Render clones
+# the whole repo regardless, so relative imports into engine/ (type-only) and the plain
+# `../../rules/registry.json` read both resolve correctly without extra configuration --
+# unlike Vercel's per-function bundlers (see CLAUDE.md's Phase 4g chronicle), a normal
+# Node web service does a real dependency walk from its own entrypoint.
+#
+# No compiled dist/ output -- this backend runs .ts directly via
+# `node --experimental-strip-types` in both dev and production (matches every other
+# package in this repo, CLAUDE.md's own top-level gotcha). buildCommand installs deps
+# (postinstall's own `prisma generate` runs automatically) and applies any pending
+# migrations against the REAL production DB; startCommand runs the server the same way
+# `npm run dev` does locally, minus --watch.
+services:
+  - type: web
+    name: cfdi-risk-auditor-backend
+    runtime: node
+    plan: free
+    rootDir: backend
+    buildCommand: npm install && npx prisma migrate deploy
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: 24.14.0
+      - key: NODE_ENV
+        value: production
+      # Secrets and per-environment values -- sync:false means Render will NOT try to
+      # populate these from this file; they're entered once in the dashboard after the
+      # service is created. See backend/.env.example for what each one is for.
+      - key: DATABASE_URL
+        sync: false
+      - key: NVIDIA_API_KEY
+        sync: false
+      - key: NIM_BASE_URL
+        value: https://integrate.api.nvidia.com/v1
+      - key: NIM_RPM_LIMIT
+        value: "32"
+      - key: JWT_SECRET
+        sync: false
+      - key: FRONTEND_URL
+        value: https://cfdi-validator.vercel.app
+      - key: INTERNAL_DRAIN_TOKEN
+        sync: false
+      - key: SEED_ADMIN_EMAIL
+        sync: false
+      - key: SEED_ADMIN_PASSWORD
+        sync: false

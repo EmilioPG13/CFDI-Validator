@@ -262,6 +262,24 @@ the pipeline is fixed code, agents claim rows from a `status`-column queue, same
   correct, since the UUID used was a placeholder, not a real invoice against that RFC; the
   point proven is that the live round trip through the deployed proxy actually happened).
 
+- **`backend/`'s `npm start` was silently broken from the moment it was written, Phase 5e.**
+  `backend/tsconfig.json` has `"noEmit": true` (this repo's project-wide "run `.ts` directly,
+  no compile step" convention — same reasoning as the `--experimental-strip-types` gotcha
+  above), but `package.json`'s original scripts were `"build": "tsc -b"` +
+  `"start": "node dist/server.js"` — a compile-then-run pair that assumes emitted output
+  `tsc -b` was configured to never produce. Nobody had ever actually run `npm run build &&
+  npm start` end to end before the Render deploy prep caught it: `dist/` never gets created,
+  so `npm start` fails with `Cannot find module`. Fixed: `"start"` now runs
+  `node --experimental-strip-types src/server.ts` directly, the same way `"dev"` already
+  did (minus `--watch`) — `"build"` stays `tsc -b`, repurposed as a pure typecheck gate
+  (fail the deploy on a real type error) rather than an actual compile step, since this
+  backend genuinely has none. Verified by actually running the fixed `npm start` locally,
+  in both default and `NODE_ENV=production` mode, and hitting `/health` for real — not just
+  reading the diff. **Lesson**: an npm script that looks conventional (`build`/`start`) can
+  be dead code nobody's ever invoked, especially when `dev` uses a completely different
+  path (`--watch` + direct `.ts` execution) that never exercises it — matches the Phase 4g
+  deploy chronicle's own broader lesson that local *assumption* isn't local *verification*.
+
 ## Dev-time subagents
 
 Defined in `.claude/agents/`: `cfdi-domain` (owns the rule catalog), `fixture-gen` (synthetic
