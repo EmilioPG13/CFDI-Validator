@@ -10,7 +10,22 @@
 // credentials: 'include' on every call: auth uses an httpOnly cookie, not a bearer
 // header -- backend/src/app.ts's CORS config is an explicit origin allowlist (not a
 // wildcard) specifically because the Fetch spec forbids that combination otherwise.
+//
+// One exception to the "hand-mirrored, never imported" rule below: Finding, used only by
+// the explain-flow functions near the bottom of this file. engine/ (unlike backend/) IS
+// designed to be browser-safe and imported directly -- frontend/src/lib/redact.ts already
+// established this exact precedent, importing the same type the same way.
+import type { Finding } from "../../../engine/src/finding.ts";
+
 const BASE_URL = (import.meta.env.VITE_BACKEND_URL as string | undefined) || "http://localhost:3001";
+
+// POST /internal/drain-queue's shared token IS meant to ship inside this public bundle --
+// see backend/src/auth/middleware.ts's requireInternalToken: it exists to deter casual
+// abuse of a cost-bearing external API, not as a real auth boundary (the endpoint has no
+// user session at all, by design -- it must be callable by an unauthenticated demo
+// visitor's browser). A value visible in browser devtools is an accepted tradeoff of that
+// design, not a leak.
+const INTERNAL_DRAIN_TOKEN = (import.meta.env.VITE_INTERNAL_DRAIN_TOKEN as string | undefined) || "";
 
 export class BackendApiError extends Error {
   status: number;
@@ -245,4 +260,40 @@ export interface LlmCallTotals {
 
 export function getLlmCallTotals(): Promise<{ totals: LlmCallTotals[] }> {
   return request("/admin/llm-calls/totals");
+}
+
+// --- Explain flow (public, no admin session -- the actual contador-facing feature) --------
+// Finding (imported at the top of this file) is the one type here NOT hand-mirrored --
+// see that import's own comment for why.
+
+export function postExplainBatch(findings: Finding[]): Promise<{ batchId: string; count: number }> {
+  return request("/api/explain", { method: "POST", body: JSON.stringify({ findings }) });
+}
+
+export interface ExplainJobResult {
+  id: string;
+  status: string;
+  findingRuleId: string;
+  explanation: string | null;
+  suggestedFix: string | null;
+  /** True for "rejected" (Verifier caught it) or "failed" (a real error) -- both distinct
+   *  from "pending"/"processing" (still working) and from "done". Mirrors
+   *  backend/src/routes/explain.ts's own shape exactly: a rejected/failed job must never
+   *  render indistinguishably from "nothing to explain here." */
+  unavailable: boolean;
+}
+
+export function getExplainBatch(batchId: string): Promise<{ jobs: ExplainJobResult[] }> {
+  return request(`/api/explain/${encodeURIComponent(batchId)}`);
+}
+
+/** Fires POST /internal/drain-queue. Its OWN response only resolves once the claimed job
+ *  finishes processing (backend/src/jobs/drain.ts awaits processJob inline) -- which can
+ *  be 100+ seconds on NIM's free tier -- so callers should not block user-visible UI on
+ *  this promise; poll getExplainBatch() instead (see lib/explain.ts). */
+export function drainQueue(max = 1): Promise<{ claimed: number; processed: number }> {
+  return request(`/internal/drain-queue?max=${max}`, {
+    method: "POST",
+    headers: { "x-internal-token": INTERNAL_DRAIN_TOKEN },
+  });
 }
