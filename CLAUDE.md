@@ -262,6 +262,21 @@ the pipeline is fixed code, agents claim rows from a `status`-column queue, same
   correct, since the UUID used was a placeholder, not a real invoice against that RFC; the
   point proven is that the live round trip through the deployed proxy actually happened).
 
+- **Neon branch topology, split 2026-08-10.** Through Phase 5e, local dev and the live
+  Render deployment shared the same Neon branch (`production`) — a deliberate pre-launch
+  simplification, called out as an open item to revisit before real user data existed. Now
+  split: project `cfdi-validator` (Neon project id `fancy-heart-93244841`) has three
+  branches — `production` (host `ep-polished-river-ayxxz36g...`, primary/default, what
+  Render's dashboard-configured `DATABASE_URL` points at — not settable from `render.yaml`
+  since it's `sync: false`, entered once in the dashboard), `development` (host
+  `ep-late-bar-aycj9caq...`, branched from `production` 2026-08-10, what local
+  `backend/.env`'s `DATABASE_URL` now points at), and `jobqueue-test` (host
+  `ep-snowy-forest-ayhdgx7k...`, pre-existing, `DATABASE_URL_TEST`, used only by
+  `jobQueue.test.ts`). Branching copies data at branch-creation time, not live — expect
+  `development` to silently drift from `production` afterward (that's the point). Created
+  via `npx neonctl branches create` (no install needed, resolved via `npx` directly) using
+  a short-lived API key from Neon's Account Settings → API Keys, revoked after use — no
+  Neon MCP or CLI is preconfigured in this environment.
 - **`backend/`'s `npm start` was silently broken from the moment it was written, Phase 5e.**
   `backend/tsconfig.json` has `"noEmit": true` (this repo's project-wide "run `.ts` directly,
   no compile step" convention — same reasoning as the `--experimental-strip-types` gotcha
