@@ -69,6 +69,87 @@ test("verifyLayer1: an explanation with no citations at all and no unknown ruleI
   assert.equal(result.passed, true);
 });
 
+// --- Layer 1: evidence-numeric-fidelity (2026-08-10 hallucination-auditor finding #1) -----
+// Regression coverage for a real gap the audit found: neither this file's citation check
+// nor Layer 2's LLM prompt (buildVerifierRequest never sends `evidence`) ever verified that
+// a NUMBER the prose states actually matches the Finding's real evidence.
+
+const NUMERIC_FINDING: Finding = {
+  ruleId: "impuestos-totales-consistencia",
+  fieldPath: "Comprobante/Impuestos/@TotalImpuestosTrasladados",
+  severity: "error",
+  satReference: "Anexo 20, el total debe ser igual a la suma de los importes registrados en Traslados.",
+  evidence: { totalTrasladadosDeclarado: "900.00", sumaTraslados: 800, decimales: 2 },
+};
+
+test("verifyLayer1: ACCEPTS prose that restates real evidence numbers, formatting differences and all", () => {
+  const output: ExplainerOutput = {
+    explicacion: "El comprobante declara 900.00, pero la suma real de los traslados es 800.",
+    sugerenciaCorreccion: "Ajusta el total a 800.00.",
+    citedRuleIds: ["impuestos-totales-consistencia"],
+  };
+  const result = verifyLayer1(NUMERIC_FINDING, output);
+  assert.equal(result.passed, true, result.reason ?? "");
+});
+
+test("verifyLayer1: REJECTS a fabricated number in the prose that matches neither evidence nor satReference", () => {
+  const output: ExplainerOutput = {
+    explicacion: "El comprobante declara 950.00, pero la suma real de los traslados es 800.",
+    sugerenciaCorreccion: "Ajusta el total a 800.00.",
+    citedRuleIds: ["impuestos-totales-consistencia"],
+  };
+  const result = verifyLayer1(NUMERIC_FINDING, output);
+  assert.equal(result.passed, false);
+  assert.equal(result.layer, 1);
+  assert.match(result.reason ?? "", /950/);
+});
+
+test("verifyLayer1: does NOT tear the digits off an alphanumeric catalog code (regression: 'G03' must not be read as the bare number 3) -- caught live against a real production sample, 2026-08-11", () => {
+  const catalogFinding: Finding = {
+    ruleId: "regimen-uso-compat",
+    fieldPath: "Comprobante/Receptor/@RegimenFiscalReceptor",
+    severity: "error",
+    satReference: "Catálogo cfdi_40_usos_cfdi: el UsoCFDI G03 solo es válido para ciertos regímenes.",
+    evidence: { RegimenFiscalReceptor: "605", UsoCFDI: "G03", regimenesValidos: ["601", "603", "606"] },
+  };
+  const output: ExplainerOutput = {
+    explicacion: "El receptor tiene el régimen 605, pero el UsoCFDI G03 solo admite los regímenes 601, 603 y 606.",
+    sugerenciaCorreccion: "Cambie el UsoCFDI o el régimen del receptor para que sean compatibles.",
+    citedRuleIds: ["regimen-uso-compat"],
+  };
+  const result = verifyLayer1(catalogFinding, output);
+  assert.equal(result.passed, true, result.reason ?? "");
+});
+
+test("verifyLayer1: a version number glued to a letter in satReference ('v4.0') still grounds the same number written with a space in prose ('4.0') -- regression, caught live 2026-08-11", () => {
+  const versionedFinding: Finding = {
+    ...NUMERIC_FINDING,
+    satReference: "Anexo 20 Guía de llenado CFDI v4.0, el total debe coincidir con la suma de Traslados.",
+  };
+  const output: ExplainerOutput = {
+    explicacion: "Según la Guía de llenado del CFDI 4.0, el total declarado 900.00 no coincide con la suma real de 800.",
+    sugerenciaCorreccion: "Ajusta el total a 800.00.",
+    citedRuleIds: ["impuestos-totales-consistencia"],
+  };
+  const result = verifyLayer1(versionedFinding, output);
+  assert.equal(result.passed, true, result.reason ?? "");
+});
+
+test("verifyLayer1: a number appearing only in satReference (not evidence) is still accepted as grounded", () => {
+  const withPageRef: Finding = {
+    ...NUMERIC_FINDING,
+    satReference:
+      "Anexo 20 Guía de llenado CFDI v4.0, p. 34-35/123: el total debe coincidir con la suma de Traslados.",
+  };
+  const output: ExplainerOutput = {
+    explicacion: "Según la página 34 del Anexo 20, el total declarado 900.00 no coincide con la suma real de 800.",
+    sugerenciaCorreccion: "Ajusta el total a 800.00.",
+    citedRuleIds: ["impuestos-totales-consistencia"],
+  };
+  const result = verifyLayer1(withPageRef, output);
+  assert.equal(result.passed, true, result.reason ?? "");
+});
+
 // --- Layer 2 (LLM, semantic) --------------------------------------------------------------
 
 function fakeProviderReturning(data: unknown): LlmProvider {

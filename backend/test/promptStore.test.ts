@@ -15,8 +15,13 @@ import {
 import { PromptStructureError } from "../src/prompts/structuralChecks.ts";
 import type { PromptVersionRecord, PromptVersionRepo } from "../src/prompts/repo.ts";
 
+// Includes the required-clause text (structuralChecks.ts's REQUIRED_FACTUAL_CLAUSE_BY_KEY
+// for "explainer.system") -- every use of this constant in this file activates it under
+// that exact key, so it must satisfy the same runtime gate the real prompts do, not just
+// the header-order/denylist checks this file's OWN tests aren't specifically targeting.
 const SAFE_BODY = `REGLAS FACTUALES:
 1. No inventes nada.
+2. Nunca completes información fiscal faltante con tu propio conocimiento general de la ley mexicana.
 
 REGLAS DE REDACCIÓN:
 - Sé breve.`;

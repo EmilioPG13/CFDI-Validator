@@ -80,7 +80,7 @@ export async function activatePromptVersion(
   const target = await repo.findById(id);
   if (!target) throw new PromptVersionNotFoundError(id);
 
-  assertPromptStructurallySafe(target.body);
+  assertPromptStructurallySafe(target.body, target.key);
 
   await repo.activate(target.key, id);
   const activated = await repo.findById(id);

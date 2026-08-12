@@ -23,6 +23,25 @@ const KNOWLEDGE_FALLBACK_PATTERNS: RegExp[] = [
   /completa con lo que sepas/i,
 ];
 
+// Per-key required load-bearing clause -- closes a real gap the 2026-08-10
+// hallucination-auditor run found: assertPromptStructurallySafe checked header order and
+// a denylist, but NOTHING guaranteed the actual anti-fabrication constraint text survived
+// an edit, so an admin could gut a prompt's factual core, keep both headers in order and
+// avoid the 4 denylist phrases, and still have it activate cleanly. explainerPrompt.test.ts
+// already asserted this exact clause against the in-code fallback via
+// assertClauseInFactualSection -- this wires the SAME check into the runtime gate so a
+// DB-stored override gets it too, not just the fallback the test suite can see.
+const REQUIRED_FACTUAL_CLAUSE_BY_KEY: Record<string, { pattern: RegExp; label: string }> = {
+  "explainer.system": {
+    pattern: /Nunca completes informaci[oó]n fiscal faltante/,
+    label: "no-knowledge-fallback clause (Explainer regla factual #2)",
+  },
+  "verifier.system": {
+    pattern: /No\s+uses\s+tu\s+propio\s+conocimiento\s+de\s+la\s+ley/i,
+    label: "no-external-knowledge-judgment clause (Verifier regla factual #1)",
+  },
+};
+
 export class PromptStructureError extends Error {
   constructor(message: string) {
     super(message);
@@ -32,8 +51,14 @@ export class PromptStructureError extends Error {
 
 /** Throws PromptStructureError with a specific, admin-facing reason on the first
  *  violation found. Never returns a boolean -- a caller that ignores a boolean is
- *  exactly the failure mode this function exists to prevent. */
-export function assertPromptStructurallySafe(body: string): void {
+ *  exactly the failure mode this function exists to prevent.
+ *
+ *  `key` is required (not optional-and-defaulted) precisely so a future call site can't
+ *  silently skip the per-key clause check by forgetting to pass it -- an unrecognized key
+ *  still runs the header/denylist checks, it just has no additional clause requirement
+ *  (the route-level KNOWN_PROMPT_KEYS gate in routes/admin/prompts.ts already rejects an
+ *  unknown key before this is ever reached). */
+export function assertPromptStructurallySafe(body: string, key: string): void {
   for (const pattern of KNOWLEDGE_FALLBACK_PATTERNS) {
     if (pattern.test(body)) {
       throw new PromptStructureError(
@@ -57,6 +82,11 @@ export function assertPromptStructurallySafe(body: string): void {
       `"${FACTUAL_HEADER}" must appear before "${STYLE_HEADER}" -- factual/anti-fabrication ` +
         "rules take priority over style guidance and must not be positioned after it.",
     );
+  }
+
+  const required = REQUIRED_FACTUAL_CLAUSE_BY_KEY[key];
+  if (required) {
+    assertClauseInFactualSection(body, required.pattern, required.label);
   }
 }
 
