@@ -28,7 +28,16 @@ import { markJobDone, markJobRejected, markJobFailed, type QueuedJob } from "./q
 // probe (a simple {saludo} schema) but reliably failed to return parseable JSON against
 // the Verifier's own (more demanding) schema, 2/2 real attempts -- a genuine reminder that
 // a health check is one sample against one schema, not a guarantee for every prompt shape.
-export const DEFAULT_EXPLAINER_MODEL = "z-ai/glm-5.2";
+//
+// DEFAULT_EXPLAINER_MODEL changed a SECOND time (2026-08-23): z-ai/glm-5.2 reached end of
+// life on NIM on 2026-08-21T09:00Z (410 Gone) -- the exact same silent-rot failure mode,
+// this time caught by the catalog-watcher's narration call failing. That second incident
+// is why server.ts now runs llm/defaultModelSelfCheck.ts on boot. The replacement was
+// chosen by probing three live candidates against the REAL explainer prompt + schema on
+// 2026-08-23: deepseek-v4-flash returned correct, faithful Spanish in ~10s;
+// minimax-m3 (~4.5s) stays as VERIFIER (different family, per
+// assertDifferentModelFamily); meta/llama-3.1-70b-instruct worked but took ~60s.
+export const DEFAULT_EXPLAINER_MODEL = "deepseek-ai/deepseek-v4-flash-0731";
 export const DEFAULT_VERIFIER_MODEL = "minimaxai/minimax-m3";
 
 async function logLlmCall(

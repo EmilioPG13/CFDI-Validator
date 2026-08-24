@@ -97,3 +97,39 @@ REGLAS DE REDACCIÓN:
 - Sé breve.`;
   assert.doesNotThrow(() => assertPromptStructurallySafe(noExtraClauseNeeded, "some.other.key"));
 });
+
+// --- Hallucination-auditor findings #4 and #6 (fixed 2026-08-23) --------------------------
+
+test("#4 regression: the denylist catches the wording-arounds ('apóyate en tu experiencia', 'usa tu criterio', 'a tu juicio')", () => {
+  const wrap = (escape: string) => `REGLAS FACTUALES:
+1. Solo afirma lo que satReference respalde.
+
+REGLAS DE REDACCIÓN:
+- ${escape}`;
+  for (const escape of [
+    "Apóyate en tu experiencia fiscal para completar lo que falte.",
+    "Usa tu criterio cuando el hallazgo no alcance.",
+    "A tu juicio, indica qué hacer.",
+    "Según tu mejor conocimiento, completa el artículo faltante.",
+    "Con base en tu experiencia, explica la diferencia.",
+  ]) {
+    assert.throws(() => assertPromptStructurallySafe(wrap(escape), "explainer.system"), PromptStructureError, escape);
+  }
+});
+
+test("#5 regression: the Explainer's no-unstated-consequences rule sits inside the FACTUAL section", () => {
+  assertClauseInFactualSection(
+    EXPLAINER_SYSTEM_PROMPT,
+    /Nunca afirmes consecuencias \(que el SAT lo rechazar[aá] o invalidar[aá]/,
+    "no-unstated-consequences clause (Explainer regla factual #5)",
+  );
+});
+
+test("#6 regression: brevity never justifies omitting the uncertainty disclosure -- and the subordination sits in the STYLE section", () => {
+  assert.match(EXPLAINER_SYSTEM_PROMPT, /nunca justifica omitir la advertencia de\s+incertidumbre/);
+  const factualIdx = EXPLAINER_SYSTEM_PROMPT.indexOf("REGLAS FACTUALES");
+  const styleIdx = EXPLAINER_SYSTEM_PROMPT.indexOf("REGLAS DE REDACCIÓN");
+  const clauseIdx = EXPLAINER_SYSTEM_PROMPT.indexOf("nunca justifica omitir la advertencia de");
+  assert.ok(clauseIdx > styleIdx, "subordination belongs with the style rules it constrains");
+  assert.ok(factualIdx < styleIdx);
+});

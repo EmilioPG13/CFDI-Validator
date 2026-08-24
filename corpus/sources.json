@@ -1,0 +1,38 @@
+{
+  "$comment": "Machine-readable pin of every ground-truth source the deterministic engine validates against. The Catalog Watcher (watcher/) reads this to decide what changed upstream; its PR is the only thing that should update this file. sha256 values are hex over the exact tracked artifact. Human context and fetch commands live in corpus/README.md -- keep both in sync on every refresh.",
+  "catalogs": {
+    "repo": "phpcfdi/resources-sat-catalogs",
+    "asset": "catalogs.db.bz2",
+    "release": "v10.13.20260731",
+    "fetched": "2026-08-04",
+    "sha256": "0ac0d97a631a60329e5c67e69c853343112a6f65aa093b7adfe13f37ab65ddaa",
+    "trackedPath": "corpus/catalogs/catalogs.db.bz2"
+  },
+  "xsd": {
+    "repo": "phpcfdi/resources-sat-xml",
+    "ref": "master",
+    "checked": "2026-08-04",
+    "files": {
+      "corpus/xsd/cfd/4/cfdv40.xsd": "d77f7cc7778c18f5b606809829a479de36d80b7eb3b3aba2111a15084ac03357",
+      "corpus/xsd/cfd/catalogos/catCFDI.xsd": "46fe267a4b8f2782a3ae9c6086501a9fcf3c4033c309aaffae3382f95882c537",
+      "corpus/xsd/cfd/tipoDatos/tdCFDI/tdCFDI.xsd": "8e3a54e0be41f7eef434904d5e405666be84b9977bc1fe2aa6552e78a0c524e6",
+      "corpus/xsd/cfd/TimbreFiscalDigital/TimbreFiscalDigitalv11.xsd": "a9c76757be34e6ce75f7a4938f1e59c806589190200bc8ba7ed0e4bbdb504356"
+    },
+    "upstreamBase": "https://raw.githubusercontent.com/phpcfdi/resources-sat-xml/master/resources/www.sat.gob.mx/sitio_internet"
+  },
+  "anexo20": {
+    "url": "http://omawww.sat.gob.mx/tramitesyservicios/Paginas/documentos/Anexo_20_Guia_de_llenado_CFDI.pdf",
+    "note": "Plain HTTP only -- this host refuses HTTPS from some environments (see corpus/README.md).",
+    "checked": "2026-08-04",
+    "sha256": "70e0c92df44b4f36975e4a0a5b1f0609f83c62deb029eda440fe4df6e2265a25",
+    "trackedPath": "corpus/anexo20/Anexo_20_Guia_de_llenado_CFDI.pdf"
+  },
+  "efos": {
+    "url": "http://omawww.sat.gob.mx/cifras_sat/Documents/Listado_Completo_69-B.csv",
+    "encoding": "windows-1252",
+    "note": "The file self-declares its as-of date in its header ('Información actualizada al ...'); efosWatch parses it per fetch -- never trust the fetch date as the data date.",
+    "checked": "2026-08-04",
+    "sha256": "54b95d41c9ca0ea1296f2885d1234e58a562620e76ac2437d2521fc2bbf36685",
+    "trackedPath": "corpus/efos/listado_completo_69b.csv"
+  }
+}

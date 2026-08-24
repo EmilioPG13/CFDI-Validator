@@ -45,3 +45,6 @@ docs/
 # Editor
 .vscode/*
 !.vscode/extensions.json
+
+# graphify tooling output (rebuildable; never project source)
+graphify-out/

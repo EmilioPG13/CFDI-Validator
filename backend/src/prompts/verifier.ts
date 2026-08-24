@@ -18,11 +18,38 @@ export interface VerifierResult {
   reason: string | null;
 }
 
-// A token shaped like a citation: "Art. 29-A", "CFDI40147", a catalog-code-looking
-// pattern (NN.N.N.NNNN). Deliberately conservative (may miss some real citations) --
-// false negatives here just mean Layer 1 lets something through for Layer 2 to catch
-// semantically; false positives would reject well-formed prose for no reason.
-const CITATION_LIKE_TOKEN = /\b(Art\.?\s*\d+[A-Z\-]*|CFDI\d{5}|\d{2}\.\d\.\d\.\d+)\b/g;
+// A token shaped like a citation: "Art. 29-A", "artículo 100", "CFDI40147", a
+// catalog-code-looking or RMF-rule-looking dotted number (2.7.1.34 -- note the FIRST
+// component is often single-digit, which the previous \d{2}\.\d\.\d\.\d+ grammar silently
+// missed entirely: EVERY real RMF rule citation was invisible to Layer 1,
+// hallucination-auditor finding #3). Deliberately broad on SHAPE; precision comes from
+// the tolerant comparison below. False negatives here just mean Layer 1 lets something
+// through for Layer 2 to catch semantically; false positives would reject well-formed
+// prose for no reason.
+const CITATION_LIKE_TOKEN =
+  /\b(?:(?:art[ií]culo|art\.?)\s*\d+[A-Z\-]*|CFDI\s?\d{4,5}|\d{1,2}(?:\.\d+){2,4})\b/gi;
+
+// Citation comparison is done on a normalized form: lowercased, accents stripped,
+// whitespace collapsed. This is what lets a faithful paraphrase ("artículo 29-A")
+// ground against the citation's own rendering ("Art. 29-A") instead of being rejected
+// for spelling, while an INVENTED reference still fails because its number simply
+// appears nowhere near any article word in satReference.
+function normalizeForCitationCompare(s: string): string {
+  return s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ");
+}
+
+/** The cores ("29-a") of every article-shaped citation actually present in the
+ *  normalized satReference -- "Art. 29-A" contributes "29-a", so prose saying
+ *  "artículo 29-A" (same core) passes while an invented "artículo 100" fails even if
+ *  the bare number 100 happens to sit elsewhere in the citation text (a page number,
+ *  say): the core only counts when an article word actually precedes it in
+ *  satReference too. */
+function collectArticleCores(normalizedSatReference: string): Set<string> {
+  const cores = new Set<string>();
+  const re = /(?:articulo|art\.?)\s*(\d+[a-z0-9-]*)/g;
+  for (const m of normalizedSatReference.matchAll(re)) cores.add(m[1]);
+  return cores;
+}
 
 // Captures a MAXIMAL run of letters/digits/comma/period as one token -- "G03", "605,",
 // "900.00", "CFDI" are each one match. Deliberately does NOT decide here whether a token
@@ -140,6 +167,69 @@ function collectFindingNumbers(finding: Finding): Set<number> {
 
 const NUMBER_TOLERANCE = 0.005;
 
+// Consequence-overreach scan (hallucination-auditor finding #5): the recurring live
+// failure was prose asserting a CONSEQUENCE ("el SAT lo rechazaría") that satReference
+// never states -- invisible to the citation check above (no citation-shaped token) and
+// to Layer 2 in practice (the claim rides along inside otherwise-faithful prose). Each
+// entry pairs one consequence-shaped claim with the ONLY roots that ground it: if those
+// roots appear nowhere in satReference, the claim is invented. Kept deliberately small
+// and high-precision -- each pattern must be specific enough that ordinary faithful
+// prose can't trip it by accident.
+interface ConsequenceClaim {
+  label: string;
+  pattern: RegExp;
+  groundingRoots: RegExp;
+}
+
+const CONSEQUENCE_CLAIMS: ConsequenceClaim[] = [
+  {
+    // "el SAT lo rechazaría", "el PAC la invalida"...
+    label: "rechazo/invalidación por SAT o PAC",
+    pattern: /(?:el\s+)?(?:sat|pac)\b[^.!?\n]{0,60}?(?:rechaz\w*|invalid\w*|anul\w*|no\s+aceptar[aí]\w*|desautoriz\w*)/gi,
+    groundingRoots: /rechaz|invalid|anul|desautoriz|no aceptad|sin validez/i,
+  },
+  {
+    // "sería rechazado", "va a ser invalidado"
+    label: "consecuencia de rechazo condicionada",
+    pattern: /(?:ser[íia]\s*(?:rechazad\w*|invalidad\w*|anulad\w*)|va[n]?\s+a\s+ser\s+(?:rechazad\w*|invalidad\w*))/gi,
+    groundingRoots: /rechaz|invalid|anul|no producen ni produjeron|sin efecto/i,
+  },
+  {
+    // "multas", "delito", "cárcel"...
+    label: "sanción o consecuencia penal",
+    pattern: /(sanci[oó]n(?:es)?\b|delito\b|c[aá]rcel\b|prisi[oó]n\b)/gi,
+    groundingRoots: /sancion|delito|carcel|prision|pena/i,
+  },
+  {
+    // "la deducción quedaría sin validez", "no sería deducible", "pierde el efecto fiscal"
+    label: "pérdida de deducción o efecto fiscal",
+    pattern: /(?:deducci[oó]n[^.!?\n]{0,50}(?:queda(?:r[íia])?\s*sin|se\s*pierde|(?:ser[íia]\s*)?inv[aá]lid\w*))|(?:pierde[ns]?\s+(?:el\s+)?efecto\s+fiscal)|no\s+(?:es|ser[íia]|ser[aá])\s+deducible/gi,
+    groundingRoots: /efecto fiscal|deduc|no producen|inexistente/i,
+  },
+];
+
+/** Layer 1 step: every consequence-shaped claim in the prose must have its grounding
+ *  roots present in satReference; otherwise the prose asserts a legal/fiscal consequence
+ *  the citation never states. Accent-insensitive on both sides via the same
+ *  normalization the citation check uses. */
+function verifyConsequenceFidelity(prose: string, satReference: string): VerifierResult {
+  const normalizedProse = normalizeForCitationCompare(prose);
+  const normalizedRef = normalizeForCitationCompare(satReference);
+  for (const claim of CONSEQUENCE_CLAIMS) {
+    const grounded = claim.groundingRoots.test(normalizedRef);
+    if (grounded) continue;
+    claim.pattern.lastIndex = 0;
+    if (claim.pattern.test(normalizedProse)) {
+      return {
+        passed: false,
+        layer: 1,
+        reason: `afirmación de consecuencia no respaldada por satReference (${claim.label})`,
+      };
+    }
+  }
+  return { passed: true, layer: null, reason: null };
+}
+
 /** No model call, same as the citation check above. Closes the one class of claim neither
  *  this file's own citation check nor Layer 2's LLM prompt ever inspected (2026-08-10
  *  hallucination-auditor finding #1): buildVerifierRequest never sends `evidence` to the
@@ -193,12 +283,28 @@ export function verifyLayer1(finding: Finding, output: ExplainerOutput): Verifie
     };
   }
 
-  // Catches an invented article number or catalog code in free prose -- not just an
-  // invented ruleId. Any citation-shaped token found in the explanation/suggestion must
-  // be a verbatim substring of finding.satReference; nothing invented, nothing paraphrased.
+  // Catches an invented article number, RMF rule, or catalog code in free prose -- not
+  // just an invented ruleId. Any citation-shaped token found in the explanation/
+  // suggestion must be grounded in finding.satReference: either it survives
+  // normalization as a substring there (verbatim modulo accents/case/spacing), or --
+  // for article-word variants ("artículo" vs "Art.") -- its numeric core must be one
+  // satReference itself presents after an article word. The old verbatim-substring-only
+  // check both missed every lowercase/accented citation AND would have rejected a
+  // faithful "artículo 29-A" paraphrase of "Art. 29-A"; hallucination-auditor #3.
   const prose = `${output.explicacion} ${output.sugerenciaCorreccion}`;
-  const citationLike = prose.match(CITATION_LIKE_TOKEN) ?? [];
-  const unsupported = citationLike.filter((c) => !finding.satReference.includes(c));
+  const normalizedRef = normalizeForCitationCompare(finding.satReference);
+  const refNoSpaces = normalizedRef.replace(/ /g, "");
+  const articleCores = collectArticleCores(normalizedRef);
+
+  const unsupported: string[] = [];
+  for (const match of prose.matchAll(CITATION_LIKE_TOKEN)) {
+    const token = match[0];
+    const norm = normalizeForCitationCompare(token);
+    if (refNoSpaces.includes(norm.replace(/ /g, ""))) continue;
+    const articleCore = /(?:articulo|art\.?)\s*(\d+[a-z0-9-]*)/.exec(norm)?.[1];
+    if (articleCore && articleCores.has(articleCore)) continue;
+    unsupported.push(token);
+  }
   if (unsupported.length > 0) {
     return {
       passed: false,
@@ -206,6 +312,12 @@ export function verifyLayer1(finding: Finding, output: ExplainerOutput): Verifie
       reason: `citas no respaldadas por satReference: ${unsupported.join(", ")}`,
     };
   }
+
+  // Catches a stated CONSEQUENCE (rejection, penalty, loss of deduction) that the
+  // citation never mentions -- the "que el SAT rechazaría" class from
+  // hallucination-auditor #5, which no other Layer 1 check can see.
+  const consequence = verifyConsequenceFidelity(prose, finding.satReference);
+  if (!consequence.passed) return consequence;
 
   // Catches an invented NUMBER in free prose -- a declared total, a catalog code -- that
   // the citation check above can't see because it only looks at citation-SHAPED tokens.

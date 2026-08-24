@@ -1,0 +1,47 @@
+# Phase 6 — Catalog Watcher (monthly scheduled + manual).
+#
+# Detects new SAT ground-truth publications, diffs them deterministically against
+# corpus/sources.json, optionally narrates via NIM under a deterministic grounding
+# check, and opens a PR. NEVER merges — a human reviews every catalog-update PR.
+#
+# First-run note: the watcher only opens a PR when something actually changed upstream,
+# so an empty month produces no commit and no notification noise.
+name: catalog-watcher
+
+on:
+  schedule:
+    # 1st of each month at 14:00 UTC (~8am Mexico City) — SAT publishes catalogs
+    # irregularly several times a month; monthly catch-up is the deliberate cadence,
+    # manual dispatch covers the in-between cases.
+    - cron: "0 14 1 * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: catalog-watcher
+  cancel-in-progress: false
+
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Install watcher deps
+        working-directory: watcher
+        run: npm install
+
+      - name: Run catalog watcher (opens a PR if anything changed)
+        working-directory: watcher
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
+          WATCHER_MODEL: ${{ vars.WATCHER_MODEL }}
+        run: node --experimental-strip-types src/cli.ts

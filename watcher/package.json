@@ -1,0 +1,19 @@
+{
+  "name": "@cfdi-risk-auditor/catalog-watcher",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "description": "Phase 6 Catalog Watcher: monthly scheduled job that detects new SAT ground-truth publications (catalogs.db releases, XSD tree, Anexo 20 PDF, 69-B CSV), diffs them deterministically against the pinned versions in corpus/sources.json, optionally narrates the diff via an LLM under a deterministic grounding check, and opens a PR. Never merges; a human does.",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "node --test --experimental-strip-types test/*.test.ts",
+    "watch": "node --experimental-strip-types src/cli.ts"
+  },
+  "dependencies": {
+    "unbzip2-stream": "^1.4.3"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "@types/node": "^24.0.0"
+  }
+}

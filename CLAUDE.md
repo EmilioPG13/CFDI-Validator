@@ -294,6 +294,29 @@ the pipeline is fixed code, agents claim rows from a `status`-column queue, same
   be dead code nobody's ever invoked, especially when `dev` uses a completely different
   path (`--watch` + direct `.ts` execution) that never exercises it — matches the Phase 4g
   deploy chronicle's own broader lesson that local *assumption* isn't local *verification*.
+- **Phase 6 Catalog Watcher (`watcher/`, built 2026-08-23).** Self-contained zero-dep
+  package (only `unbzip2-stream`, same as engine) that runs monthly in GitHub Actions
+  (`.github/workflows/catalog-watcher.yml`, cron + manual dispatch, free tier) and locally
+  via `npm run watch -- --local`. Flow: compare upstream (phpcfdi releases, XSD tree on
+  master, Anexo 20 PDF, 69-B CSV) against the machine-readable pin `corpus/sources.json`
+  → deterministic diff → optional NIM narration under a strict grounding check → PR.
+  **Never merges**; PR body carries a human checklist. Replay tests against real
+  historical releases are network-heavy and gated: `RUN_WATCHER_REPLAY=1 node --test` from
+  `watcher/`. The narration grounding check is TEXTUAL, not arithmetic: a true-but-derived
+  number ("24 tablas sin cambios") gets rejected unless precomputed into the payload —
+  which is why `buildNarrationFacts` ships every count as a field (caught live, twice, on
+  the first real run).
+- **`Readable.from(plainUint8Array)` iterates it BYTE-BY-BYTE**, and through a transform
+  like `unbzip2-stream` the result is silently EMPTY output with no error — a `Buffer`
+  emits as one chunk and decodes fine. If a pipeline yields nothing, check what class the
+  source actually is before suspecting the transformer (caught by watcher's own round-trip
+  test on its first run).
+- **NIM models reach end of life silently and code-level defaults rot with them**:
+  `z-ai/glm-5.2` went 410 Gone on 2026-08-21 (second incident of this exact class after
+  Phase 5e's mistral default). Two defenses now exist: `backend/src/server.ts` runs
+  `llm/defaultModelSelfCheck.ts` on every boot (logs a loud warning naming the stale role
+  and its remediation), and the watcher degrades to diff-only when its narration model is
+  gone. Neither auto-fixes — model swaps are a human decision.
 
 ## Dev-time subagents
 

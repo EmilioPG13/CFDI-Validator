@@ -222,3 +222,101 @@ test("assertDifferentModelFamily: accepts genuinely different families", () => {
     assertDifferentModelFamily("meta/llama-3.1-8b-instruct", "mistralai/mistral-medium-3.5-128b"),
   );
 });
+
+// --- Hallucination-auditor findings #3 and #5 (fixed 2026-08-23) --------------------------
+
+// Finding #3: the old citation regex only matched "Art."-prefixed and 2-digit-first
+// dotted shapes, so lowercase paraphrases sailed through unbacked and EVERY RMF rule
+// number ("2.7.1.34") was invisible to Layer 1.
+const RMF_FINDING: Finding = {
+  ruleId: "cfdi-cancelado-sat",
+  fieldPath: "x",
+  severity: "error",
+  satReference:
+    "RMF 2026, reglas 2.7.1.34 (Aceptación del receptor para la cancelación del CFDI) y CFF Art. 29-A.",
+  evidence: { cancelado: true },
+};
+
+test("verifyLayer1 #3 regression: a faithful lowercase/accented paraphrase ('artículo 29-A') grounds against 'Art. 29-A'", () => {
+  const output: ExplainerOutput = {
+    explicacion: "El Art. 29-A regula la cancelación; véase también artículo 29-A del CFF.",
+    sugerenciaCorreccion: "Confirma con el emisor.",
+    citedRuleIds: ["cfdi-cancelado-sat"],
+  };
+  const result = verifyLayer1(REAL_FINDING, output);
+  assert.equal(result.passed, true, result.reason ?? "");
+});
+
+test("verifyLayer1 #3 regression: an INVENTED lowercase citation is no longer invisible", () => {
+  const output: ExplainerOutput = {
+    explicacion: "Conforme al artículo 999-Z del CFF, esto procede distinto.",
+    sugerenciaCorreccion: "N/A",
+    citedRuleIds: ["cfdi-cancelado-sat"],
+  };
+  const result = verifyLayer1(REAL_FINDING, output);
+  assert.equal(result.passed, false);
+  assert.match(result.reason ?? "", /999-Z/);
+});
+
+test("verifyLayer1 #3 regression: an invented single-digit-first RMF number is rejected", () => {
+  const output: ExplainerOutput = {
+    explicacion: "Aplica la regla 2.7.1.99 de la RMF 2026.",
+    sugerenciaCorreccion: "N/A",
+    citedRuleIds: ["cfdi-cancelado-sat"],
+  };
+  const result = verifyLayer1(RMF_FINDING, output);
+  assert.equal(result.passed, false);
+  assert.match(result.reason ?? "", /2\.7\.1\.99/);
+});
+
+test("verifyLayer1 #3 regression: a REAL RMF number quoted from satReference still passes", () => {
+  const output: ExplainerOutput = {
+    explicacion: "Aplica la regla 2.7.1.34 de la RMF 2026 y el Art. 29-A del CFF.",
+    sugerenciaCorreccion: "N/A",
+    citedRuleIds: ["cfdi-cancelado-sat"],
+  };
+  const result = verifyLayer1(RMF_FINDING, output);
+  assert.equal(result.passed, true, result.reason ?? "");
+});
+
+test("verifyLayer1 #5 regression: an unstated consequence ('el SAT lo rechazaría') is rejected when satReference never says it", () => {
+  const output: ExplainerOutput = {
+    explicacion: "Este comprobante está cancelado; el SAT lo rechazaría en la declaración anual.",
+    sugerenciaCorreccion: "Solicita la cancelación.",
+    citedRuleIds: ["cfdi-cancelado-sat"],
+  };
+  const result = verifyLayer1(REAL_FINDING, output);
+  assert.equal(result.passed, false);
+  assert.match(result.reason ?? "", /consecuencia no respaldada/);
+});
+
+test("verifyLayer1 #5: the same consequence phrasing PASSES when satReference itself states it", () => {
+  // emisor-efos-69b's real citation contains "no producen ni produjeron efecto fiscal
+  // alguno" -- prose restating that loss-of-effect consequence must not be rejected.
+  const efosFinding: Finding = {
+    ruleId: "emisor-efos-69b",
+    fieldPath: "x",
+    severity: "error",
+    satReference:
+      "CFF Art. 69-B: los comprobantes expedidos por ese contribuyente no producen ni produjeron efecto fiscal alguno.",
+    evidence: { situacion: "Definitivo" },
+  };
+  const output: ExplainerOutput = {
+    explicacion: "El comprobante sería invalidado: las operaciones no producen efecto fiscal alguno según el Art. 69-B.",
+    sugerenciaCorreccion: "No lo utilices como soporte de deducción.",
+    citedRuleIds: ["emisor-efos-69b"],
+  };
+  const result = verifyLayer1(efosFinding, output);
+  assert.equal(result.passed, true, result.reason ?? "");
+});
+
+test("verifyLayer1 #5: an invented penalty claim is rejected", () => {
+  const output: ExplainerOutput = {
+    explicacion: "Este comprobante cancelado podría acarrear sanciones al receptor.",
+    sugerenciaCorreccion: "N/A",
+    citedRuleIds: ["cfdi-cancelado-sat"],
+  };
+  const result = verifyLayer1(REAL_FINDING, output);
+  assert.equal(result.passed, false);
+  assert.match(result.reason ?? "", /sanción o consecuencia penal/);
+});

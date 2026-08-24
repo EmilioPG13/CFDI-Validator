@@ -15,12 +15,22 @@ const STYLE_HEADER = "REGLAS DE REDACCIÓN";
 
 // Phrases that would silently license the exact failure mode this whole layer exists to
 // prevent: filling a fiscal gap from the model's own general knowledge instead of only
-// what the Finding's satReference actually supports.
+// what the Finding's satReference actually supports. The first four were the original
+// set; the rest were added after the 2026-08-10 hallucination-auditor run flagged how
+// easily the originals were worded around (finding #4): "apóyate en tu experiencia",
+// "usa tu criterio", "a tu juicio" all license exactly the same escape hatch without
+// containing any of the original four phrases.
 const KNOWLEDGE_FALLBACK_PATTERNS: RegExp[] = [
   /tu conocimiento/i,
   /usa tu conocimiento de la ley/i,
   /en caso de no contar con.*informaci[oó]n.*usa/i,
   /completa con lo que sepas/i,
+  /ap[oó]yate en tu/i,
+  /en tu experiencia/i,
+  /(?:usa|con)\s+tu\s+criterio/i,
+  /a\s+tu\s+juicio/i,
+  /seg[uú]n\s+tu\s+(?:mejor\s+)?conocimiento/i,
+  /con\s+base\s+en\s+tu\s+(?:experiencia|criterio|conocimiento)/i,
 ];
 
 // Per-key required load-bearing clause -- closes a real gap the 2026-08-10

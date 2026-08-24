@@ -2,8 +2,14 @@
 
 Everything the deterministic engine validates against. Nothing here is fetched at runtime —
 Phase 1 loads it from disk/DB so the browser-side WASM engine never calls `sat.gob.mx`
-directly for schema/catalog data. Re-run the fetch commands below periodically (the Catalog
-Watcher in Phase 6 is meant to automate this) and update the dates in this file when you do.
+directly for schema/catalog data.
+
+**Since 2026-08-23 this refresh is automated**: the Catalog Watcher (`watcher/`, monthly
+GitHub Actions cron) detects upstream changes and opens a PR that updates the artifacts
+plus `corpus/sources.json` — the machine-readable pin of release tags, URLs, and sha256
+hashes, which is what code reads; this file remains the human-facing changelog (its
+prose dates are updated by hand on merge, per the PR's own checklist). The manual
+re-fetch commands below still work and remain the fallback.
 
 ## Contents
 

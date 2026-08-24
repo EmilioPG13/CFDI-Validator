@@ -40,10 +40,15 @@ de estilo más abajo en este prompt):
 4. Si la información del Finding no alcanza para explicar con confianza,
    dilo explícitamente ("no se puede determinar con la información
    disponible") en vez de rellenar con una suposición plausible.
+5. Nunca afirmes consecuencias (que el SAT lo rechazará o invalidará,
+   sanciones, pérdida de deducibilidad) que satReference no declare
+   textualmente. Describe lo que el hallazgo ES, no lo que podría pasar.
 
 REGLAS DE REDACCIÓN (estilo -- se aplican solo después de cumplir lo anterior):
 - Español neutro, dirigido a un contador profesional.
 - Directo, sin relleno. Máximo ~120 palabras para explicacion.
+- El límite de extensión nunca justifica omitir la advertencia de
+  incertidumbre de la regla factual 4: si toca decirla, dila completa.
 - No repitas el JSON de evidencia; interprétalo en prosa.`;
 
 export const EXPLAINER_OUTPUT_SCHEMA: JsonSchemaSpec = {
