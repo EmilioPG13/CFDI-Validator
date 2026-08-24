@@ -306,6 +306,14 @@ the pipeline is fixed code, agents claim rows from a `status`-column queue, same
   number ("24 tablas sin cambios") gets rejected unless precomputed into the payload —
   which is why `buildNarrationFacts` ships every count as a field (caught live, twice, on
   the first real run).
+- **GitHub refuses `GITHUB_TOKEN` PR creation by default** ("GitHub Actions is not
+  permitted to create or approve pull requests", HTTP 403 at the pulls endpoint even with
+  `permissions: pull-requests: write` in the workflow file). Fix is a repo setting:
+  Settings → Actions → General → "Allow GitHub Actions to create and approve pull
+  requests" — API equivalent: `PUT /repos/{owner}/{repo}/actions/permissions/workflow`
+  with `{"can_approve_pull_request_reviews": true}` (**PUT**, not PATCH — PATCH returns a
+  confusing 404). Caught on the watcher's first real CI run; everything before that step
+  worked identically to local.
 - **`Readable.from(plainUint8Array)` iterates it BYTE-BY-BYTE**, and through a transform
   like `unbzip2-stream` the result is silently EMPTY output with no error — a `Buffer`
   emits as one chunk and decodes fine. If a pipeline yields nothing, check what class the
