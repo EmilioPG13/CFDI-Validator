@@ -52,7 +52,8 @@ compile step.
 src/
   auth/       JWT + bcryptjs auth, requireAuth/requireAdmin/requireInternalToken middleware
   jobs/       Job queue (atomic claim via FOR UPDATE SKIP LOCKED), drain, processor
-  llm/        Provider abstraction (NVIDIA NIM), rate limiting, model catalog, health checks
+  llm/        Provider abstraction (NVIDIA NIM), rate limiting, model catalog, health checks,
+              boot-time default-model staleness self-check
   prompts/    Explainer/Verifier prompt templates, PromptVersion CRUD, structural safety checks
   routes/     Express routers: /auth, /api/explain, /internal/drain-queue, /admin/*
   settings/   AppSetting resolver (DB override with an enforced code-level default fallback)

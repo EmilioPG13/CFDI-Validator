@@ -4,143 +4,121 @@ A bulk fiscal-risk auditor for Mexican accountants (*contadores*). Drop in a ZIP
 invoices already downloaded from the SAT portal — get back a risk report. **No e.firma, no
 SAT credentials, no CSD, ever.**
 
-> 🚧 **Early build.** The deterministic rule engine works end to end for a first pair of
-> rules; the web app, LLM explanation layer, and the SAT cross-checks (cancellation status,
-> 69-B/EFOS suppliers) are not wired up yet. See [Status](#status) below for the real state,
-> and the [full build plan](#roadmap) for what's next.
+**Live:** [https://cfdi-validator.vercel.app](https://cfdi-validator.vercel.app) · public
+demo runs on bundled sample invoices, no account needed · admin console at `/admin/login`.
+
+All six planned phases are built, deployed, and verified end-to-end against production:
+deterministic engine → live SAT cross-checks → web app (WASM, local-first) → LLM
+explanation layer with an enforcing Verifier → admin console → automated catalog watcher.
 
 ## Why this exists
 
 Every PAC (SAT-authorized invoicing provider) and the SAT itself already give away CFDI 4.0
 *validation* for free. That's not a business. What accountants actually lose sleep over at
 month-end close is different: did a supplier cancel an invoice **after** the client already
-deducted it? Is a supplier quietly sitting on the SAT's [69-B/EFOS
-list](https://www.sat.gob.mx/) — meaning every invoice they issued may produce zero tax
-effect, retroactively? Nobody surfaces that. This project does, using only **public,
-credential-free** SAT data:
+deducted it? Is a supplier sitting on the SAT's 69-B/EFOS list — meaning every invoice they
+issued may produce zero tax effect, retroactively? Nobody surfaces that. This project does,
+using only **public, credential-free** SAT data:
 
 - `ConsultaCFDIService` — the SAT's public SOAP endpoint — returns an invoice's live
-  cancellation status and 69-B validation, given nothing but its UUID and the two RFCs
+  cancellation status and EFOS validation, given nothing but its UUID and the two RFCs
   already on the invoice.
-- The SAT's own 69-B list, a public CSV updated several times a month.
+- The SAT's own 69-B list (a public CSV), refreshed monthly by this repo's Catalog Watcher.
 
 No e.firma required for either. That's a deliberate legal and product decision, not a
 missing feature — the e.firma has the same legal weight as a handwritten signature in Mexico
-(Art. 17-D CFF), and asking for it would put this tool in the same trust bracket as software
-that already requires it for descarga masiva. Not asking is the harder, more defensible
-position to build toward, and it's the one this project takes.
+(Art. 17-D CFF). Not asking is the harder, more defensible position, and it's the one this
+project takes.
 
 ## Core principle
 
 **The deterministic engine is the product. An LLM is never a source of truth.** Every
-user-visible finding traces back to a `ruleId` and a real SAT citation — an Anexo 20 section,
-a specific catalog table, or an official rejection code like `CFDI40147`. There is
-deliberately no LLM orchestrator deciding what to check; the pipeline is fixed code. The only
-place a model appears is explaining an already-deterministic finding in plain Spanish, and
-even that explanation is checked against the same citation before it ships.
+user-visible finding traces to a `ruleId` and a real SAT citation — an Anexo 20 section, a
+specific catalog table, or an official rejection code like `CFDI40147`. There is
+deliberately no LLM orchestrator deciding what to check; the pipeline is fixed code. The
+only place a model appears is explaining an already-deterministic finding in plain Spanish,
+and even that explanation passes two enforcement layers before it ships:
 
-## Architecture
+1. **Verifier Layer 1 (deterministic):** every cited `ruleId` must exist in the rule
+   registry, every citation-shaped token must ground in the Finding's own `satReference`
+   (accent/case tolerant), every number in the prose must come from the Finding's evidence,
+   and unstated consequences ("el SAT lo rechazaría") are rejected outright.
+2. **Verifier Layer 2 (a second model, different family by enforced policy):** semantic
+   overstatement check. Fail-closed on both layers.
+
+## Architecture as built
 
 ```
-ZIP of CFDI XMLs
-  → parse (XML → structured record)
-  → validate against the real CFDI 4.0 XSD tree (offline, no network)
-  → resolve against SAT catalogs (RegimenFiscal, UsoCFDI, ClaveProdServ, códigos postales…)
-  → evaluate rules  →  Finding[] { ruleId, fieldPath, severity, satReference, evidence }
-  → [cancellation check via ConsultaCFDIService]   ← not yet built
-  → [69-B supplier match]                          ← not yet built
-  → [LLM explains each Finding, in Spanish, cited]  ← not yet built
-  → risk report
+Browser (WASM, local-first)                    Server (stateless)                 External
+────────────────────────────                   ──────────────────                 ────────
+ZIP → unzip → parse XML
+  → XSD validate (libxml2-wasm, offline)
+  → resolve SAT catalogs (bundled JSON)
+  → evaluate 13 cited rules  →  Finding[]
+       │  redact (RFCs/UUIDs never leave)
+       └──────────────────────────────────► POST /api/explain → Job queue (Postgres)
+                                              │ Explainer (NIM) → Verifier L1+L2
+   poll ◄──────────────────────────────────── ┘
+  → UUID batch ─────────────────────────────────────────────────────────────► ConsultaCFDIService
+  → supplier RFCs vs 69-B CSV (in-browser index)
+
+Monthly, unattended (GitHub Actions):
+  Catalog Watcher: phpcfdi releases / XSD tree / Anexo 20 PDF / 69-B CSV
+    vs corpus/sources.json pin → deterministic diff → grounded AI summary → pull request
+    (never merges; human reviews every catalog-update PR)
 ```
 
-Runs local-first: parsing, XSD validation, catalog resolution and rule evaluation are pure
-functions with no network calls, designed to run in-browser via WASM once the web app lands
-(see [Roadmap](#roadmap)) — so client XML never has to leave the accountant's machine to be
-checked. Only the SAT cross-checks *require* leaving the browser, and they need nothing but a
-UUID and two RFCs the invoice already carries.
+The heavy lifting (parse, XSD, catalogs, rules) runs **in your browser via WASM** — client
+XML never leaves the machine except the four fields `ConsultaCFDIService` requires, which is
+disclosed in the UI. The LLM layer receives redacted `Finding` structures only.
 
-## The subagent system
+## Repository map
 
-This project is built with a deliberately narrow multi-agent setup — not because more agents
-is more impressive, but because it's the same pattern that makes the *product's* legal
-grounding possible, applied to how the codebase itself gets written. Four dev-time agents,
-each with a single accountable job:
-
-| Agent | Job | Why it's a separate agent |
-|---|---|---|
-| [`cfdi-domain`](.claude/agents/cfdi-domain.md) | Turns SAT source material (Anexo 20, catalog data, official rejection codes) into a cited rule spec | Owns the one thing that must never be guessed: the citation |
-| [`fixture-gen`](.claude/agents/fixture-gen.md) | Generates synthetic, structurally-valid CFDI XML — one pair (pass/fail) per rule | There are zero real customer invoices to test against |
-| [`rule-engine`](.claude/agents/rule-engine.md) | Implements a rule spec as a pure TypeScript function, verified against its fixtures | Consumes the spec; never invents one |
-| [`hallucination-auditor`](.claude/agents/hallucination-auditor.md) | Audits LLM-facing prompts and outputs for any claim not traceable to a `ruleId` | The project's legal liability shield, checked at dev time |
-
-Each agent hands its output to the next — `cfdi-domain`'s spec is what `fixture-gen` builds
-fixtures for and what `rule-engine` implements against — and every rule that ships has a
-citation, a passing fixture, and a failing fixture, or it doesn't ship. Full reasoning for
-this split, and why it mirrors a pattern already proven out in a sibling project, lives in
-[`CLAUDE.md`](CLAUDE.md).
-
-## Status
-
-**Working today:**
-- The full XSD validation pipeline against the real, offline CFDI 4.0 schema tree —
-  including the TimbreFiscalDigital stamp complement every real invoice carries (a
-  non-obvious fix; see `CLAUDE.md`'s gotchas if curious why the base schema alone can't do
-  this).
-- Two rules, end to end, each with a cited spec, a passing and a failing fixture, and a
-  passing test: `RegimenFiscal`×`UsoCFDI` compatibility, and postal-code existence in
-  `DomicilioFiscalReceptor` (the latter deliberately scoped down from — and documented as
-  *not* equivalent to — the SAT's real `CFDI40147`/`CFDI40148` checks, which require data
-  this project will never have access to; see `engine/rules/registry.json`).
-- A Kimi-generated landing page scaffold in `frontend/`, not yet wired to anything live.
-
-**Not built yet:** the SAT cross-checks that are the actual differentiator (cancellation
-status, 69-B matching), the browser/WASM port of the engine, the LLM explanation layer, and
-any UI beyond the static landing page. See [Roadmap](#roadmap).
+| Package | What it is |
+|---|---|
+| [`engine/`](engine/) | The deterministic core: parsing, offline XSD validation, catalog resolution, 13 rules → `Finding[]`. Pure functions, portable to WASM |
+| [`sat-client/`](sat-client/) | Zero-dependency clients for the SAT's public endpoints (`ConsultaCFDIService`, 69-B index) |
+| [`frontend/`](frontend/) | React + Vite SPA: landing, drag-drop audit UI, report with per-finding "Explicar con IA", admin console. Vercel-hosted |
+| [`backend/`](backend/) | Express API: auth, job queue (`FOR UPDATE SKIP LOCKED`), NIM provider abstraction, prompt versioning, admin routes. Render-hosted |
+| [`watcher/`](watcher/) | Phase 6 Catalog Watcher: monthly GitHub Actions cron, deterministic diff of SAT ground-truth sources, grounded narration, auto-opened PRs |
+| [`corpus/`](corpus/README.md) | Ground truth: CFDI 4.0 XSD tree, SAT catalogs (phpcfdi SQLite), Anexo 20 PDF, 69-B CSV — pinned in `corpus/sources.json`, fetched from public sources with documented dates |
 
 ## Getting started
 
-Requires Node 22–24 and npm.
+Requires Node 24 and npm.
 
 ```bash
-git clone <this-repo>
-cd cfdi-risk-auditor
+git clone https://github.com/EmilioPG13/CFDI-Validator.git
+cd CFDI-Validator
 
-# Deterministic engine — parsing, XSD validation, rule evaluation
-cd engine
-npm install   # also decompresses corpus/catalogs/catalogs.db from the tracked .bz2
-npm test      # 8 passing tests: XSD resolution, fixture validity, both rules
-npm run typecheck
+# Deterministic engine (no network, no credentials)
+cd engine && npm install && npm test && npm run typecheck
 
-# Landing page (static, not yet wired to the engine)
-cd ../frontend
-npm install
-npm run dev
+# Web app
+cd ../frontend && npm install && npm run dev    # http://localhost:5173
+
+# Backend (needs DATABASE_URL etc.; see backend/.env.example)
+cd ../backend && npm install && npm run dev     # http://localhost:3001
+
+# Catalog Watcher (local dry-run mode; CI opens PRs monthly on its own)
+cd ../watcher && npm install && npm run watch -- --local
 ```
 
-The ground-truth data the engine validates against — the CFDI 4.0 XSD tree, SAT catalogs,
-Anexo 20, and the 69-B list — lives in [`corpus/`](corpus/README.md), fetched from public SAT
-mirrors and documented with fetch dates. That file also carries an open, unresolved caveat
-worth reading before trusting any 69-B-derived claim: the fetched list self-reports as
-current to 2025-12-31, months stale against a list the SAT updates several times monthly.
+Test suites across all five packages run green; the watcher additionally carries replay
+tests against real historical phpcfdi releases, gated behind `RUN_WATCHER_REPLAY=1`.
+
+The ground-truth data lives in [`corpus/`](corpus/README.md), documented with fetch dates
+and known caveats — notably the 69-B list's self-declared as-of date, which is why the
+EFOS rule cross-checks live status per invoice instead of trusting the CSV alone.
 
 ## Legal & privacy posture
 
-- No credentials of any kind are requested or stored — not now, not planned for a first
-  release. If e.firma-based bulk download is ever added, it would require local-only signing
-  (the key never reaching a server), an open-sourced signing module, and legal review first —
-  not a casual feature addition.
-- Every finding cites a real, checkable source. Nothing is presented as a fact without one.
-- This is not tax advice, and the product will say so explicitly wherever findings are shown.
-
-## Roadmap
-
-Full phased plan (ground-truth corpus → deterministic core → SAT cross-checks → rule depth →
-web app → LLM layer → automated catalog updates) is tracked outside this repo during active
-design; `CLAUDE.md` points to it. Broad strokes, in order: more rules with real citations,
-the `ConsultaCFDIService` cancellation check and 69-B matcher (the actual product
-differentiator), porting the engine to run in-browser via WASM, then — and only then — an LLM
-layer for plain-Spanish explanations, gated behind the same citation discipline the rule
-engine already enforces.
+- No credentials of any kind are requested or stored.
+- Client XML is parsed and validated in-browser; only redacted finding structures reach the
+  server, and the SAT round-trip uses fields the invoice already carries.
+- Every finding cites a real, checkable source; the Verifier rejects explanations that
+  invent one.
+- This is not tax advice, and the UI says so explicitly wherever findings are shown.
 
 ## License
 
