@@ -39,8 +39,10 @@ tracks whatever SAT currently publishes, no release tags to pin to).
 ### `catalogs/catalogs.db` — SAT catalog values, structured
 
 From [`phpcfdi/resources-sat-catalogs`](https://github.com/phpcfdi/resources-sat-catalogs)
-release **`v10.13.20260731`** (published 2026-07-31 — five days before this fetch, so this is
-current against the Jul 2026 SAT catalog update). SQLite, 179 tables, ~100 MB decompressed.
+release **`v10.15.20260821`** (published 2026-08-21 — refreshed 2026-08-24 by the Catalog
+Watcher's first merged PR, #4: vs. the previous pin v10.13.20260731 the only `cfdi_40_*`
+change was 3 new rows in `cfdi_40_patentes_aduanales`; see `docs/watcher/2026-08-24.md`).
+SQLite, 179 tables, ~100 MB decompressed.
 `.db.bz2` is kept alongside `.db` so re-fetching is a diff against a known-good compressed
 artifact.
 
