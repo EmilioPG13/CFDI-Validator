@@ -3,9 +3,9 @@
   "catalogs": {
     "repo": "phpcfdi/resources-sat-catalogs",
     "asset": "catalogs.db.bz2",
-    "release": "v10.15.20260821",
-    "fetched": "2026-08-24",
-    "sha256": "9ce0820ed212a9d82d146ade34db6c0d2f84051e4f421e0c5f5f4e7e192f332a",
+    "release": "v10.18.20260925",
+    "fetched": "2026-10-01",
+    "sha256": "516a43183f634fbdc43be652c4333f890286af2353c1a0627d89c942090efeff",
     "trackedPath": "corpus/catalogs/catalogs.db.bz2"
   },
   "xsd": {
