@@ -25,8 +25,8 @@ import path from "node:path";
 // Source provenance — see corpus/README.md for the full fetch history. Update this
 // alongside a catalogs.db refresh; there's no version table inside the DB itself to read
 // it from automatically (checked 2026-08-06 — no `%version%`/`%meta%` table exists).
-const SOURCE_RELEASE = "phpcfdi/resources-sat-catalogs v10.15.20260821";
-const SOURCE_FETCHED = "2026-08-24";
+const SOURCE_RELEASE = "phpcfdi/resources-sat-catalogs v10.18.20260925";
+const SOURCE_FETCHED = "2026-10-01";
 
 const CATALOGS_DB_PATH = path.resolve(import.meta.dirname, "../../corpus/catalogs/catalogs.db");
 const OUT_DIR = path.resolve(import.meta.dirname, "../catalog-bundle");
